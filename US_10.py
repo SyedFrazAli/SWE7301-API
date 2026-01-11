@@ -1,32 +1,21 @@
-"""
-US-10: Store Geospatial Observation Data
-"""
 from flask import request, jsonify
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, Integer, Text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base  # Fixes MovedIn20Warning
 
 Base = declarative_base()
 
 class ObservationRecord(Base):
-    """Database model for geospatial observation records."""
     __tablename__ = 'observations'
-    
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
-    timezone = Column(String(50), nullable=False)
-    coordinates = Column(String(255), nullable=False)  # Simplified for compatibility
-    satellite_id = Column(String(100), nullable=False)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timezone = Column(String(50))
+    coordinates = Column(String(255))
+    satellite_id = Column(String(100))
     spectral_indices = Column(String(500))
     notes = Column(Text)
-    
-    def validate(self):
-        """Validate required fields."""
-        if not self.timezone or not self.coordinates or not self.satellite_id:
-            raise ValueError('Missing required fields')
 
     def to_dict(self):
-        """Convert object to dictionary for JSON responses."""
         return {
             'id': self.id,
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
@@ -39,82 +28,34 @@ class ObservationRecord(Base):
 
 def register(app, session):
     @app.route('/api/observations', methods=['POST'])
-    def create_observation():
-        try:
-            data = request.get_json()
-            
-            # Handle timestamp
-            ts_str = data.get('timestamp')
-            ts_obj = datetime.fromisoformat(ts_str.replace('Z', '+00:00')) if ts_str else datetime.utcnow()
-
-            observation = ObservationRecord(
-                timestamp=ts_obj,
-                timezone=data.get('timezone'),
-                coordinates=data.get('coordinates'),
-                satellite_id=data.get('satellite_id'),
-                spectral_indices=data.get('spectral_indices'),
-                notes=data.get('notes')
-            )
-            
-            observation.validate()
-            session.add(observation)
-            session.commit()
-            
-            return jsonify({'id': observation.id, 'message': 'Observation created'}), 201
-            
-        except Exception as e:
-            session.rollback()
-            return jsonify({'error': str(e)}), 400
+    def create_obs():
+        data = request.get_json()
+        new_obs = ObservationRecord(**data)
+        session.add(new_obs)
+        session.commit()
+        return jsonify({'id': new_obs.id}), 201
 
     @app.route('/api/observations/<int:obs_id>', methods=['GET'])
-    def get_observation(obs_id):
-        obs = session.query(ObservationRecord).filter_by(id=obs_id).first()
-        if not obs:
-            return jsonify({'error': 'Observation not found'}), 404
-        return jsonify(obs.to_dict()), 200
+    def get_obs(obs_id):
+        obs = session.query(ObservationRecord).get(obs_id)
+        return jsonify(obs.to_dict()) if obs else (jsonify({'error': 'Not found'}), 404)
 
-    @app.route('/api/observations/<int:obs_id>', methods=['PUT'])
-    def update_observation(obs_id):
-        try:
-            obs = session.query(ObservationRecord).filter_by(id=obs_id).first()
-            if not obs:
-                return jsonify({'error': 'Observation not found'}), 404
-                
-            data = request.get_json()
-            
-            # Update fields if provided
-            obs.notes = data.get('notes', obs.notes)
-            obs.spectral_indices = data.get('spectral_indices', obs.spectral_indices)
-            obs.coordinates = data.get('coordinates', obs.coordinates)
-            obs.timezone = data.get('timezone', obs.timezone)
-            obs.satellite_id = data.get('satellite_id', obs.satellite_id)
-
-            obs.validate()  # Ensure required fields still exist
-            session.commit()
-            
-            return jsonify({'message': 'Observation updated successfully'}), 200
-            
-        except Exception as e:
-            session.rollback()
-            return jsonify({'error': str(e)}), 500
-        
     @app.route('/api/observations/<int:obs_id>', methods=['PUT'])
     def update_obs(obs_id):
         obs = session.query(ObservationRecord).get(obs_id)
-        if not obs: 
+        if not obs:
             return jsonify({'error': 'Not found'}), 404
-        
-        # --- US-11: Historical Integrity Check ---
-        now = datetime.now()
-        # Find the first day of the current quarter
-        quarter_start_month = ((now.month - 1) // 3) * 3 + 1
-        current_quarter_start = datetime(now.year, quarter_start_month, 1)
 
-        # If the observation was created before this quarter, return 403
-        if obs.timestamp < current_quarter_start:
+        # --- US-11: Historical Integrity Logic ---
+        now = datetime.now()
+        # Calculate start of current quarter
+        q_start_month = ((now.month - 1) // 3) * 3 + 1
+        current_q_start = datetime(now.year, q_start_month, 1)
+
+        if obs.timestamp < current_q_start:
             return jsonify({
                 'error': 'Historical Integrity Violation',
-                'message': 'Records from previous quarters cannot be modified.'
+                'message': 'Cannot modify records from previous quarters.'
             }), 403
         # ------------------------------------------
 
@@ -122,6 +63,5 @@ def register(app, session):
         for key, value in data.items():
             if hasattr(obs, key):
                 setattr(obs, key, value)
-        
         session.commit()
         return jsonify({'message': 'Updated'}), 200
