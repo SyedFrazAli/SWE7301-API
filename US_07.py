@@ -1,72 +1,83 @@
 from flask import request, jsonify
 
 # In-memory data store for this module
-items = {
-    1: {"id": 1, "name": "Initial Item"}
+orders = {
+    1: {"id": 1, "order_title": "Sausage Pizza"}
 }
-current_id = 2
+current_order_id = 2
+
+def registerOrder(app, session=None):
+    """
+    This registers the full rest API which supports basic crud operations: GET, POST, PUT, PATCH, and DELETE
+    """
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify({"error": "Method Not Allowed"}), 405
+    
+    # --- GET: Read All (Fulfills GET) ---
+    @app.route("/api/orders", methods=["GET"])
+    def get_orders():
+        return jsonify({"orders": list(orders.values())}), 200
+
+    # --- GET REQUEST: This api is for fetching a single order ---
+    @app.route("/api/orders/<int:order_id>", methods=["GET"])
+    def get_order(order_id):
+        order = orders.get(order_id)
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+        return jsonify(order), 200
+
+    # --- POST: This is a POST request to create a new order ---
+    @app.route("/api/orders", methods=["POST"])
+    def create_order():
+        global current_order_id
+        data = request.get_json()
+        if not data or "order_title" not in data:
+            return jsonify({"error": "Bad Request: 'order_title' is required"}), 400
+        
+        new_order = {"id": current_order_id, "order_title": data["order_title"]}
+        orders[current_order_id] = new_order
+        current_order_id += 1
+        return jsonify(new_order), 201
+
+    # --- PUT: This is a PUT request to update an existing order, this will fully replace an entity present in the database using the ID---
+    @app.route("/api/orders/<int:order_id>", methods=["PUT"])
+    def update_order(order_id):
+        if order_id not in orders:
+            return jsonify({"error": "Order not found"}), 404
+        
+        data = request.get_json()
+        if not data or "order_title" not in data:
+            return jsonify({"error": "Bad Request: 'order_title' is required"}), 400
+            
+        orders[order_id]["order_title"] = data["order_title"]
+        return jsonify(orders[order_id]), 200
+
+    # --- PATCH: This Endpoint allows partial updates of a database entity ---
+    @app.route("/api/orders/<int:order_id>", methods=["PATCH"])
+    def patch_order(order_id):
+        if order_id not in orders:
+            return jsonify({"error": "Order not found"}), 404
+        
+        data = request.get_json()
+        if "order_title" in data:
+            orders[order_id]["order_title"] = data["order_title"]
+        return jsonify(orders[order_id]), 200
+
+    # --- DELETE: This Endpoint is used to delete an order from the database ---
+    @app.route("/api/orders/<int:order_id>", methods=["DELETE"])
+    def delete_order(order_id):
+        if order_id not in orders:
+            return jsonify({"error": "Order not found"}), 404
+    
+        del orders[order_id]
+        return "", 204
+
 
 def register(app, session=None):
     """
-    Registers the full RESTful suite for integration.
-    Fulfills Story: Support GET, POST, PUT, PATCH, and DELETE.
+    Backwards-compatible register wrapper expected by `app.py`.
     """
-
-    # --- GET: Read All (Fulfills GET) ---
-    @app.route("/api/items", methods=["GET"])
-    def get_items():
-        return jsonify({"items": list(items.values())}), 200
-
-    # --- GET: Read Single (Fulfills GET) ---
-    @app.route("/api/items/<int:item_id>", methods=["GET"])
-    def get_item(item_id):
-        item = items.get(item_id)
-        if not item:
-            return jsonify({"error": "Resource not found"}), 404
-        return jsonify(item), 200
-
-    # --- POST: Create (Fulfills POST) ---
-    @app.route("/api/items", methods=["POST"])
-    def create_item():
-        global current_id
-        data = request.get_json()
-        if not data or "name" not in data:
-            return jsonify({"error": "Bad Request: 'name' is required"}), 400
-        
-        new_item = {"id": current_id, "name": data["name"]}
-        items[current_id] = new_item
-        current_id += 1
-        return jsonify(new_item), 201
-
-    # --- PUT: Full Update (Fulfills PUT) ---
-    @app.route("/api/items/<int:item_id>", methods=["PUT"])
-    def update_item(item_id):
-        if item_id not in items:
-            return jsonify({"error": "Resource not found"}), 404
-        
-        data = request.get_json()
-        if not data or "name" not in data:
-            return jsonify({"error": "Bad Request: 'name' is required"}), 400
-            
-        items[item_id]["name"] = data["name"]
-        return jsonify(items[item_id]), 200
-
-    # --- PATCH: Partial Update (Fulfills PATCH) ---
-    @app.route("/api/items/<int:item_id>", methods=["PATCH"])
-    def patch_item(item_id):
-        if item_id not in items:
-            return jsonify({"error": "Resource not found"}), 404
-        
-        data = request.get_json()
-        if "name" in data:
-            items[item_id]["name"] = data["name"]
-        return jsonify(items[item_id]), 200
-
-    # --- DELETE: Remove (Fulfills DELETE) ---
-    @app.route("/api/items/<int:item_id>", methods=["DELETE"])
-    def delete_item(item_id):
-        if item_id not in items:
-            return jsonify({"error": "Resource not found"}), 404
-        
-        del items[item_id]
-        return "", 204
+    # Delegate to the original implementation
+    return registerOrder(app, session)

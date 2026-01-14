@@ -1,74 +1,136 @@
 from flask import request, jsonify
 
 # Mock Database for this module (In-memory)
-items = {
-    1: {"id": 1, "name": "Standard Laptop"}
+orders = {
+    1: {"id": 1, "order_title": "Sausage Pizza"}
 }
-current_id = 2
+current_order_id = 2
 
 def register(app, session=None):
     """
     Registers the Bulk Operations endpoint.
-    Fulfills Story: Support bulk operations for efficiency.
     """
 
-    @app.route("/api/items/bulk", methods=["POST"])
-    def bulk_items():
-        global current_id
+    # Bulk create orders endpoint
+    @app.route("/api/orders/bulk", methods=["POST"])
+    def bulk_create_orders():
+        global current_order_id
         data = request.get_json()
 
-        # AC: Check if multiple records are submitted in a single request
-        if not isinstance(data, list):
+        if not data or "orders" not in data:
             return jsonify({
                 "error": "Bad Request",
-                "message": "Payload must be a JSON list of records."
+                 "message": "'orders' array is required",
+                "code": 400
             }), 400
 
+        if not isinstance(data["orders"], list):
+            return jsonify({
+                "error": "Bad Request",
+                "message": "'orders' must be an array",
+                "code": 400
+            }), 400
+        
         results = {
-            "success_count": 0,
-            "failure_count": 0,
-            "details": []
+            "created": [],
+            "failed": []
         }
 
-        for index, record in enumerate(data):
-            try:
-                # Validation: Ensure each record has a name
-                if not record or 'name' not in record:
-                    raise ValueError("Missing 'name' field")
-
-                item_id = record.get("id")
-
-                # DoD: Create or Update (Upsert) logic
-                if item_id and item_id in items:
-                    # Update existing record
-                    items[item_id]["name"] = record["name"]
-                    action = "updated"
-                    final_id = item_id
-                else:
-                    # Create new record
-                    final_id = item_id if item_id else current_id
-                    items[final_id] = {"id": final_id, "name": record["name"]}
-                    if not item_id:
-                        current_id += 1
-                    action = "created"
-
-                results["details"].append({
-                    "index": index,
-                    "status": "success",
-                    "action": action,
-                    "id": final_id
+        for idx, order_data in enumerate(data["orders"]):
+            if not isinstance(order_data, dict) or "order_title" not in order_data:
+                results["failed"].append({
+                    "index": idx,
+                    "data": order_data,
+                    "error": "Missing or invalid 'order_title'"
                 })
-                results["success_count"] += 1
+                continue
 
-            except Exception as e:
-                # Partial failure handling: Record the error and continue
-                results["details"].append({
-                    "index": index,
-                    "status": "error",
-                    "message": str(e)
-                })
-                results["failure_count"] += 1
+            new_order = {
+                "id": current_order_id,
+                "order_title": order_data["order_title"]
+            }
+            orders[current_order_id] = new_order
+            results["created"].append(new_order)
+            current_order_id += 1
 
-        # Return 207 Multi-Status if there's a mix of success and failure
-        status_code = 201 if results["failure_count"] == 0 else 207
+
+        # Partial failure handling
+        if results["failed"] and not results["created"]:
+            return jsonify({
+                "error": "All order creations failed",
+                "message": "No orders were created",
+                "details": results["failed"],
+                "code": 400
+            }), 400
+        
+        status_code = 207 if results["failed"] else 201
         return jsonify(results), status_code
+    
+    # Bulk update orders endpoint
+    @app.route("/api/orders/bulk", methods=["PUT"])
+    def bulk_update_orders():
+        data = request.get_json()
+
+        if not data or "orders" not in data:
+            return jsonify({
+                "error": "Bad Request",
+                "message": "'orders' array is required",
+                "code": 400
+            }), 400
+        
+        if not isinstance(data["orders"], list):
+            return jsonify({
+                "error": "Bad Request",
+                "message": "'orders' must be an array",
+                "code": 400
+            }), 400
+        
+        results = {
+            "updated": [],
+            "failed": []
+        }
+
+        for idx, order_data in enumerate(data["orders"]):
+            if (not isinstance(order_data, dict) or 
+                "id" not in order_data or 
+                "order_title" not in order_data):
+                results["failed"].append({
+                    "index": idx,
+                    "data": order_data,
+                    "error": "Missing 'id' or 'order_title'"
+                })
+                continue
+
+            order_id = order_data["id"]
+
+            if order_id not in orders:
+                results["failed"].append({
+                    "index": idx,
+                    "id": order_id,
+                    "error": "Order not found"
+                })
+                continue
+
+            if "order_title" not in order_data:
+                results["failed"].append({
+                    "index": idx,
+                    "id": order_id,
+                    "error": "Missing 'order_title'"
+                })
+                continue
+
+            orders[order_id]["order_title"] = order_data["order_title"]
+            results["updated"].append(orders[order_id])
+
+        # Partial failure handling
+        if results["failed"] and not results["updated"]:
+            return jsonify({
+                "error": "All order updates failed",
+                "message": "No orders were updated",
+                "details": results["failed"],
+                "code": 400
+            }), 400
+        status_code = 207 if results["failed"] else 200
+        return jsonify(results), status_code
+    
+     
