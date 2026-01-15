@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flask_jwt_extended import JWTManager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -12,16 +13,22 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def get_app():
     app = Flask(__name__)
     
+    # JWT Configuration for US-13 (Authentication)
+    app.config["JWT_SECRET_KEY"] = "super-secret-key-change-me"
+    jwt = JWTManager(app)
+    
     # We create a scoped session for the routes
     session = SessionLocal()
-    import http_endpoints_07 as US_07
-    import json_data_format_08 as US_08  
-    import bulk_12 as US_12
+    import US_10
+    import US_09
+    import US_06
+    import US_13
     
     # Registration is critical for the routes to exist
-    US_07.register(app, session)
-    US_08.register(app, session)
-    US_12.register(app, session)
+    US_10.register(app, session)
+    US_09.register(app, session)
+    US_06.register(app, session)
+    US_13.register(app, session)
 
     return app
 
