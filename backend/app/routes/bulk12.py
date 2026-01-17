@@ -1,6 +1,11 @@
-from flask import request, jsonify
+from flask import request, jsonify, g
+from app.routes.observation import ObservationRecord
 
-def register(app, session=None):
+def get_db():
+    """Helper to get the current request's DB session"""
+    return g.db
+
+def register(app):
     """
     Registers GeoScope Bulk Retrieval.
     Fulfills US-12 (Updated): Efficiently fetching multiple records in one request.
@@ -8,9 +13,10 @@ def register(app, session=None):
 
     @app.route("/api/v1/bulk/insights", methods=["GET"])
     def get_multiple_insights():
-        # Process multiple records in a single request via ID list
+        db = get_db()  # per-request session
+
+        # Get comma-separated IDs from query param
         ids_param = request.args.get('ids')
-        
         if not ids_param:
             return jsonify({
                 "error": "Bad Request",
@@ -19,7 +25,7 @@ def register(app, session=None):
             }), 400
 
         try:
-            id_list = [int(id.strip()) for id in ids_param.split(',')]
+            id_list = [int(i.strip()) for i in ids_param.split(',')]
         except ValueError:
             return jsonify({
                 "error": "Bad Request",
@@ -27,26 +33,15 @@ def register(app, session=None):
                 "code": 400
             }), 400
 
-        # Mock Database lookup
-        mock_db = {
-            101: {"id": 101, "type": "wildfire", "risk": "high"},
-            102: {"id": 102, "type": "deforestation", "risk": "critical"}
-        }
+        # Query the database for all matching IDs at once
+        records = db.query(ObservationRecord).filter(ObservationRecord.id.in_(id_list)).all()
 
-        successful = []
-        failed = []
+        # Build successful and failed lists
+        found_ids = {r.id for r in records}
+        successful = [r.to_dict() for r in records]
+        failed = [{"id": i, "error": "Record not found"} for i in id_list if i not in found_ids]
 
-        # Partial failure handling (identify which IDs were not found)
-        for requested_id in id_list:
-            if requested_id in mock_db:
-                successful.append(mock_db[requested_id])
-            else:
-                failed.append({
-                    "id": requested_id,
-                    "error": "Record not found"
-                })
-
-        # Return 200 even with partial failure, but include the "failed" details
+        # Return results with metadata
         return jsonify({
             "results": successful,
             "metadata": {
