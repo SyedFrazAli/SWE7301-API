@@ -13,7 +13,7 @@ This repository contains the backend infrastructure and functional modules for m
 - **US-22: ORM for API** — ✅ Done (Implemented via SQLAlchemy)
 - **US-23: GitHub Source Control** — ✅ Done
 - **US-19: SQLite for Development** — ✅ Done (Universal compatibility)
-- **US-25: CI/CD Pipeline** — ⏳ In Progress (GitHub Actions)
+- **US-25: CI/CD Pipeline** — ✅ Done
 
 ### 🛰 Attiq-ur-Rehman (Functional Features)
 
