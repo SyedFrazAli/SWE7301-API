@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
-from backendApi.app import get_app, SessionLocal, engine
-from US_10 import Base, ObservationRecord
+from backend.app import get_app, SessionLocal, engine
+from backend.app.routes.observation import Base, ObservationRecord
 
 @pytest.fixture
 def client():
