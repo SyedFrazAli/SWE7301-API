@@ -5,31 +5,34 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Standard SQLite URL - Works on all machines
-DATABASE_URL = "sqlite:///app.db"
+DATABASE_URL = "sqlite:///run.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_app():
     app = Flask(__name__)
-    
-    # JWT Configuration for US-13 (Authentication)
+
     app.config["JWT_SECRET_KEY"] = "super-secret-key-change-me"
-    jwt = JWTManager(app)
-    
-    # We create a scoped session for the routes
+    JWTManager(app)
+
     session = SessionLocal()
+
     import app.routes.observation as observation
     import app.routes.filtering as filtering
     import app.routes.healthApi as healthApi
-    import app.models.jwtAuth as jwtAuth    
+    import app.models.jwtAuth as jwtAuth
+    from app.db import Base
 
-        # Registration is critical for the routes to exist
+    Base.metadata.create_all(bind=engine)
+
     observation.register(app, session)
     filtering.register(app, session)
     healthApi.register(app, session)
     jwtAuth.register(app, session)
+
     return app
+
 
 if __name__ == '__main__':
     app = get_app()
