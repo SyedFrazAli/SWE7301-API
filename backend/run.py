@@ -1,6 +1,7 @@
 from flask import Flask, g
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flasgger import Swagger
 from app.db import engine, SessionLocal, Base
 import os
 
@@ -11,6 +12,9 @@ def get_app():
     # JWT Config
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-me")
     JWTManager(app)
+
+    # Swagger Documentation
+    Swagger(app)
 
     # Import models to register with SQLAlchemy
     from app.routes.observation import ObservationRecord, Product, Subscription

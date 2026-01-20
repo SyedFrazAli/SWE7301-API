@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: geoscope-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    rootDir: backend
+    envVars:
+      - key: JWT_SECRET_KEY
+        generateValue: true
+
+  - type: web
+    name: geoscope-frontend
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi
+    rootDir: frontend
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          name: geoscope-backend
+          type: web
+          property: host
+      - key: ALLOWED_HOSTS
+        value: .onrender.com

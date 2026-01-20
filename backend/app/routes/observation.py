@@ -106,12 +106,31 @@ def register(app):
 
     @app.route("/api/products", methods=["GET"])
     def get_products():
+        """
+        Get all available products
+        ---
+        responses:
+          200:
+            description: A list of products
+        """
         db = get_db()
         products = db.query(Product).all()
         return jsonify([p.to_dict() for p in products])
 
     @app.route("/api/subscriptions", methods=["GET"])
     def get_subscriptions():
+        """
+        Get user subscriptions
+        ---
+        parameters:
+          - name: username
+            in: query
+            type: string
+            required: false
+        responses:
+          200:
+            description: A list of subscriptions
+        """
         username = request.args.get("username")
         db = get_db()
         if username:
