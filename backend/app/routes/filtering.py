@@ -1,16 +1,21 @@
 """
 US-09: Filter and Retrieve Geospatial Observation Data
 """
-from flask import request, jsonify
-from US_10 import ObservationRecord # Import the model from your storage module
+from flask import request, jsonify, g
+from app.routes.observation import ObservationRecord
 
-def register(app, session):
+def get_db():
+    """Helper to get the current request's DB session"""
+    return g.db
+
+def register(app):
     """
     Registers the filtering routes for US-09.
     """
     
     @app.route('/api/observations/filter', methods=['GET'])
     def filter_observations():
+        db = get_db()  # use per-request session
         try:
             # 1. Get query parameters from the URL
             satellite_id = request.args.get('satellite_id')
@@ -19,7 +24,7 @@ def register(app, session):
             end_date = request.args.get('end_date')
 
             # 2. Start building the query
-            query = session.query(ObservationRecord)
+            query = db.query(ObservationRecord)
 
             # 3. Apply filters if they exist in the request
             if satellite_id:

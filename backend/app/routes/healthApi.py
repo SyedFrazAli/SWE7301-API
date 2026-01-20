@@ -3,7 +3,7 @@ US-05: Basic API Health Endpoints
 """
 from flask import jsonify
 
-def register(app, session):
+def register(app):
     """
     Registers the basic health routes for US-05.
     """

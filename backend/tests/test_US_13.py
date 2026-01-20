@@ -4,7 +4,7 @@ Story: As a Product Owner, I want JWT authentication so that only authorised use
 DoD: Endpoints require valid JWTs for access.
 """
 import pytest
-from app import get_app
+from run import get_app
 
 @pytest.fixture
 def client():
