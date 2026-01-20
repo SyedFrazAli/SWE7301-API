@@ -62,6 +62,29 @@ def get_db():
 def register(app):
     @app.route("/api/observations", methods=["POST"])
     def create_obs():
+        """
+        Create a new observation record
+        ---
+        parameters:
+          - name: body
+            in: body
+            required: true
+            schema:
+              properties:
+                timezone:
+                  type: string
+                coordinates:
+                  type: string
+                satellite_id:
+                  type: string
+                spectral_indices:
+                  type: string
+                notes:
+                  type: string
+        responses:
+          201:
+            description: Observation created successfully
+        """
         db = get_db()
         data = request.get_json() or {}
 
@@ -79,6 +102,20 @@ def register(app):
 
     @app.route("/api/observations/<int:obs_id>", methods=["GET"])
     def get_obs(obs_id):
+        """
+        Get a specific observation record
+        ---
+        parameters:
+          - name: obs_id
+            in: path
+            type: integer
+            required: true
+        responses:
+          200:
+            description: Observation details
+          404:
+            description: Not found
+        """
         db = get_db()
         obs = db.get(ObservationRecord, obs_id)
         if not obs:
@@ -87,6 +124,27 @@ def register(app):
 
     @app.route("/api/observations/<int:obs_id>", methods=["PUT"])
     def update_obs(obs_id):
+        """
+        Update an existing observation record
+        ---
+        parameters:
+          - name: obs_id
+            in: path
+            type: integer
+            required: true
+          - name: body
+            in: body
+            required: true
+            schema:
+              properties:
+                notes:
+                  type: string
+        responses:
+          200:
+            description: Updated successfully
+          404:
+            description: Not found
+        """
         db = get_db()
         obs = db.get(ObservationRecord, obs_id)
         
