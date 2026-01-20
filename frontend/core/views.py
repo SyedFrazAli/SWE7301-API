@@ -7,12 +7,8 @@ from .forms import LoginForm
 BACKEND_URL = "http://127.0.0.1:5000"
 
 def index(request):
-    """Simple view to test Django is running"""
-    return JsonResponse({
-        'status': 'success',
-        'message': 'Django is running!',
-        'project': 'GeoScope Analytics - US-14'
-    })
+    """Landing page view"""
+    return render(request, 'index.html')
 
 
 def home(request):
@@ -47,6 +43,35 @@ def login_view(request):
             error = f"Backend connection error: {str(e)}"
 
     return render(request, "login.html", {"form": form, "error": error})
+
+
+def signup_view(request):
+    """Handle user signup"""
+    error = None
+
+    if request.method == "POST":
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        
+        try:
+            response = requests.post(f"{BACKEND_URL}/signup", json={
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "password": password
+            })
+            
+            if response.status_code == 200 or response.status_code == 201:
+                # Redirect to login after successful signup
+                return redirect("login")
+            else:
+                error = response.json().get("message", "Signup failed")
+        except requests.exceptions.RequestException as e:
+            error = f"Backend connection error: {str(e)}"
+
+    return render(request, "signup.html", {"error": error})
 
 
 def dashboard(request):

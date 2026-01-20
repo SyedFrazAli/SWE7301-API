@@ -1,44 +1,48 @@
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoScope Analytics - US-14</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🛰️ GeoScope Analytics</h1>
-            <p class="subtitle">Geospatial Intelligence Platform - US-14</p>
-        </header>
-          <main>
-            <div class="status-card">
-                <h2>✅ Django is Running!</h2>
-                <p>US-14: Django Website - Basic Setup Completed</p>
-                <div id="status-info">
-                    <strong>Status:</strong> Active<br>
-                    <strong>Message:</strong> Django server is running successfully<br>
-                    <strong>Project:</strong> GeoScope Analytics - US-14
-                </div>
-            </div>
-            
-            <div class="info-section">
-                <h3>Project Information</h3>
-                <ul>
-                    <li><strong>Backend:</strong> Flask API (port 5000)</li>
-                    <li><strong>Frontend:</strong> Django Website (port 8001)</li>
-                    <li><strong>Database:</strong> SQLite (Development)</li>
-                </ul>
-            </div>
-        </main>
-        
-        <footer>
-            <p>Group 4 - SWE7301 API Project</p>
-        </footer>
-    </div>
-    
-    <script src="{% static 'app.js' %}"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoScope Analytics - Real-Time Geospatial Intelligence</title>
+    <link rel="stylesheet" href="{% static 'landing.css' %}" />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <a href="{% url 'index' %}" class="brand">GeoScope Analytics</a>
+      <ul class="nav-links">
+        <li><a href="#solution">Solution</a></li>
+        <li><a href="#apis">Apis</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="{% url 'login' %}">Login</a></li>
+        <li><a href="{% url 'signup' %}">Register</a></li>
+      </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          Real-Time <span class="highlight">Geospatial</span> Intelligence for a
+          Changing Planet
+        </h1>
+        <p class="hero-subtitle">
+          Monitor Climate Impact, Land use, and environmental risks using
+          AI-powered satellite insights
+        </p>
+        <a href="{% url 'signup' %}" class="get-started-btn">Get Started</a>
+      </div>
+
+      <div class="hero-logo">
+        <div class="logo-container">
+          <img
+            src="{% static 'images/geoscope-logo.jpeg' %}"
+            alt="GeoScope Analytics Logo"
+          />
+        </div>
+      </div>
+    </section>
+  </body>
 </html>
