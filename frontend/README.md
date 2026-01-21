@@ -44,7 +44,8 @@ venv\Scripts\Activate.ps1
 cd frontend
 
 # Install Django dependencies
-pip install -r requirements.txt
+pip install -r requirements.txt 
+# Added more packages to requirements.txt
 
 # Run database migrations
 python manage.py migrate
