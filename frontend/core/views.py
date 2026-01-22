@@ -148,9 +148,7 @@ def google_callback_view(request):
         request.session["first_name"] = request.GET.get("first_name", "User")
         
         is_2fa = request.GET.get("is_2fa_enabled")
-        if is_2fa == "0" or is_2fa == "False" or is_2fa == "false":
-             return redirect("setup_2fa")
-        
+        # Direct redirect to dashboard, skipping mandatory 2FA setup
         return redirect("dashboard")
     else:
         return render(request, "login.html", {"error": "Google Login Failed: Missing tokens."})
@@ -402,3 +400,29 @@ def disable_2fa_view(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+def update_profile_view(request):
+    """Handle profile update"""
+    access_token = request.session.get("access_token")
+    if not access_token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+        
+    if request.method == "POST":
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            headers = {"Authorization": f"Bearer {access_token}"}
+            response = requests.put(f"{BACKEND_URL}/api/profile", json=data, headers=headers)
+            
+            if response.status_code == 200:
+                # Update session
+                res_data = response.json()
+                user = res_data.get("user", {})
+                request.session["first_name"] = user.get("first_name")
+                request.session["username"] = user.get("email")
+                return JsonResponse({"success": True})
+            else:
+                return JsonResponse(response.json(), status=response.status_code)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Method not allowed"}, status=405)

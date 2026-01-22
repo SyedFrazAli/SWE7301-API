@@ -417,6 +417,44 @@ def register(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/profile', methods=['PUT'])
+    @jwt_required()
+    def update_profile():
+        """
+        Update user profile information.
+        """
+        try:
+            db = get_db()
+            email = get_jwt_identity()
+            user = db.query(User).filter(User.email == email).first()
+            
+            if not user:
+                return jsonify({"msg": "User not found"}), 404
+            
+            data = request.json
+            if "first_name" in data:
+                user.first_name = data["first_name"]
+            if "last_name" in data:
+                user.last_name = data["last_name"]
+            # Optional: Allow email update, but might need re-verification logic. For now, allow simple update.
+            # if "email" in data and data["email"] != user.email:
+            #     # Check if email taken
+            #     existing = db.query(User).filter(User.email == data["email"]).first()
+            #     if existing:
+            #         return jsonify({"msg": "Email already in use"}), 409
+            #     user.email = data["email"]
+            #     # Token invalidation logic would be needed if identity changes
+            
+            db.commit()
+            
+            return jsonify({
+                "msg": "Profile updated successfully",
+                "user": user.to_dict()
+            }), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     # OAuth Setup
     from authlib.integrations.flask_client import OAuth
     import os
@@ -426,12 +464,7 @@ def register(app):
         name='google',
         client_id=os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id"),
         client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
-        access_token_url='https://accounts.google.com/o/oauth2/token',
-        access_token_params=None,
-        authorize_url='https://accounts.google.com/o/oauth2/auth',
-        authorize_params=None,
-        api_base_url='https://www.googleapis.com/oauth2/v1/',
-        userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={'scope': 'openid email profile'},
     )
 

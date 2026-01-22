@@ -81,9 +81,36 @@
     <div class="signup-page">
         <div class="signup-container">
             <div class="signup-card settings-card">
-                <h1 class="title">Security Settings</h1>
+                <h1 class="title">Settings</h1>
 
-                <div class="setting-item" style="margin-top: 30px;">
+                <!-- Profile Section -->
+                <div class="setting-item" style="margin-top: 30px; margin-bottom: 40px;">
+                    <h3>Profile Information</h3>
+                    <form id="profile-form">
+                        <div class="field">
+                            <label>First Name</label>
+                            <input type="text" id="first_name" name="first_name" value="{{ user_info.first_name }}"
+                                class="field" style="width: 100%; padding: 8px;">
+                        </div>
+                        <div class="field" style="margin-top: 10px;">
+                            <label>Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value="{{ user_info.last_name }}"
+                                class="field" style="width: 100%; padding: 8px;">
+                        </div>
+                        <div class="field" style="margin-top: 10px;">
+                            <label>Email</label>
+                            <input type="email" id="email" name="email" value="{{ user_info.email }}" class="field"
+                                style="width: 100%; padding: 8px;" disabled title="Email updates coming soon">
+                        </div>
+                        <button type="submit" class="btn-signup" style="margin-top: 15px;">Save Changes</button>
+                        <div id="profile-msg" style="margin-top: 10px; font-weight: bold;"></div>
+                    </form>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+                <h1 class="title" style="font-size: 24px;">Security</h1>
+                <div class="setting-item" style="margin-top: 20px;">
                     <h3>Authenticator App 2FA
                         {% if user_info.is_2fa_enabled %}
                         <span class="status-badge status-enabled">Enabled</span>
@@ -129,6 +156,47 @@
             const btnDisable = document.getElementById('btn-disable-2fa');
             const modal = document.getElementById('enableModal');
             const closeSpan = document.getElementsByClassName("close")[0];
+
+            // Profile Update
+            const profileForm = document.getElementById('profile-form');
+            if (profileForm) {
+                profileForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const firstName = document.getElementById('first_name').value;
+                    const lastName = document.getElementById('last_name').value;
+                    const msgDiv = document.getElementById('profile-msg');
+
+                    msgDiv.innerText = "Saving...";
+                    msgDiv.style.color = "#666";
+
+                    try {
+                        const response = await fetch('/update-profile/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                first_name: firstName,
+                                last_name: lastName
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            msgDiv.innerText = "Profile updated successfully!";
+                            msgDiv.style.color = "green";
+                            setTimeout(() => { msgDiv.innerText = ""; }, 3000);
+                        } else {
+                            msgDiv.innerText = data.error || "Update failed";
+                            msgDiv.style.color = "red";
+                        }
+                    } catch (e) {
+                        msgDiv.innerText = "Network error";
+                        msgDiv.style.color = "red";
+                    }
+                });
+            }
 
             // disable
             if (btnDisable) {
