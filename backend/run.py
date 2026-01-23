@@ -1,20 +1,14 @@
 from flask import Flask, g
-from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flasgger import Swagger
 from app.db import engine, SessionLocal, Base
 import os
 
 def get_app():
     app = Flask(__name__)
-    CORS(app)
 
     # JWT Config
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-me")
     JWTManager(app)
-
-    # Swagger Documentation
-    Swagger(app)
 
     # Import models to register with SQLAlchemy
     from app.routes.observation import ObservationRecord, Product, Subscription
@@ -26,34 +20,12 @@ def get_app():
     db = SessionLocal()
     if db.query(Product).count() == 0:
         products = [
-            Product(id=1, name="Crop Health Monitoring", description="High-res spectral analysis for agriculture.", price="$499/mo"),
-            Product(id=2, name="Wildfire Risk Assessment", description="Real-time thermal imaging and risk modeling.", price="$799/mo"),
-            Product(id=3, name="Urban Expansion Tracking", description="Monthly change detection for city planning.", price="$299/mo"),
-            Product(id=4, name="Deforestation Alert System", description="Instant notification of illegal logging activities.", price="$599/mo")
+            Product(name="Crop Health Monitoring", description="High-res spectral analysis for agriculture.", price="$499/mo"),
+            Product(name="Wildfire Risk Assessment", description="Real-time thermal imaging and risk modeling.", price="$799/mo"),
+            Product(name="Urban Expansion Tracking", description="Monthly change detection for city planning.", price="$299/mo"),
+            Product(name="Deforestation Alert System", description="Instant notification of illegal logging activities.", price="$599/mo")
         ]
         db.add_all(products)
-        db.commit()
-
-        # Seed Observations
-        observations = [
-            ObservationRecord(product_id=1, satellite_id="SENTINEL-2", notes="Healthy wheat field analysis", coordinates="34.05, -118.24"),
-            ObservationRecord(product_id=2, satellite_id="LANDSAT-8", notes="Thermal anomaly detected in forest", coordinates="45.52, -122.67"),
-            ObservationRecord(product_id=3, satellite_id="SPOT-7", notes="New construction area identified", coordinates="51.50, -0.12"),
-            ObservationRecord(product_id=4, satellite_id="SENTINEL-1", notes="Logging tracks spotted", coordinates="-3.46, -62.21")
-        ]
-        db.add_all(observations)
-        
-        # Seed Subscriptions
-        # full_user: all subscriptions
-        for pid in [1, 2, 3, 4]:
-            db.add(Subscription(user_id="full_user", product_id=pid))
-        
-        # partial_user: products 1 and 2
-        for pid in [1, 2]:
-            db.add(Subscription(user_id="partial_user", product_id=pid))
-        
-        # none_user: no subscriptions
-        
         db.commit()
     db.close()
 

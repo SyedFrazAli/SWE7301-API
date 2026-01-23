@@ -3,38 +3,6 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, Integer, Text
 from app.db import Base
 
-class Product(Base):
-    __tablename__ = "products"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-    description = Column(Text)
-    price = Column(String(50))
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "price": self.price
-        }
-
-class Subscription(Base):
-    __tablename__ = "subscriptions"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(String(100), nullable=False)
-    product_id = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "product_id": self.product_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None
-        }
-
 class ObservationRecord(Base):
     __tablename__ = "observations"
 
@@ -45,7 +13,6 @@ class ObservationRecord(Base):
     satellite_id = Column(String(100))
     spectral_indices = Column(String(500))
     notes = Column(Text)
-    product_id = Column(Integer, nullable=True)
 
     def to_dict(self):
         return {
@@ -56,10 +23,37 @@ class ObservationRecord(Base):
             "satellite_id": self.satellite_id,
             "spectral_indices": self.spectral_indices,
             "notes": self.notes,
-            "product_id": self.product_id,
         }
 
-from flask_jwt_extended import jwt_required, get_jwt_identity
+class Product(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text)
+    price = Column(String(50))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "price": self.price
+        }
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), nullable=False)
+    product_id = Column(Integer, nullable=False)
+    status = Column(String(50), default="active")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "product_id": self.product_id,
+            "status": self.status
+        }
 
 def get_db():
     """Helper to get the current request's DB session"""
@@ -84,23 +78,11 @@ def register(app):
         return jsonify({"id": new_obs.id}), 201
 
     @app.route("/api/observations/<int:obs_id>", methods=["GET"])
-    @jwt_required()
     def get_obs(obs_id):
-        current_user = get_jwt_identity()
         db = get_db()
         obs = db.get(ObservationRecord, obs_id)
         if not obs:
             return jsonify({"error": "Not found"}), 404
-        
-        # Access control: check if user has subscription for the product
-        if obs.product_id:
-            sub = db.query(Subscription).filter(
-                Subscription.user_id == current_user,
-                Subscription.product_id == obs.product_id
-            ).first()
-            if not sub:
-                return jsonify({"error": "Forbidden: Subscription required"}), 403
-
         return jsonify(obs.to_dict())
 
     @app.route("/api/observations/<int:obs_id>", methods=["PUT"])
@@ -122,62 +104,18 @@ def register(app):
         db.commit()
         return jsonify({"message": "Updated"}), 200
 
-    @app.route("/api/observations/<int:obs_id>", methods=["DELETE"])
-    def delete_obs(obs_id):
-        """
-        Delete an observation record
-        ---
-        parameters:
-          - name: obs_id
-            in: path
-            type: integer
-            required: true
-        responses:
-          200:
-            description: Deleted successfully
-          404:
-            description: Not found
-        """
-        db = get_db()
-        obs = db.get(ObservationRecord, obs_id)
-        if not obs:
-            return jsonify({"error": "Not found"}), 404
-        
-        db.delete(obs)
-        db.commit()
-        return jsonify({"message": "Deleted"}), 200
-
     @app.route("/api/products", methods=["GET"])
     def get_products():
-        """
-        Get all available products
-        ---
-        responses:
-          200:
-            description: A list of products
-        """
         db = get_db()
         products = db.query(Product).all()
         return jsonify([p.to_dict() for p in products])
 
     @app.route("/api/subscriptions", methods=["GET"])
     def get_subscriptions():
-        """
-        Get user subscriptions
-        ---
-        parameters:
-          - name: user_id
-            in: query
-            type: string
-            required: false
-        responses:
-          200:
-            description: A list of subscriptions
-        """
-        user_id = request.args.get("user_id")
+        username = request.args.get("username")
         db = get_db()
-        if user_id:
-            subs = db.query(Subscription).filter(Subscription.user_id == user_id).all()
+        if username:
+            subs = db.query(Subscription).filter(Subscription.username == username).all()
         else:
             subs = db.query(Subscription).all()
         return jsonify([s.to_dict() for s in subs])
@@ -186,11 +124,11 @@ def register(app):
     def create_subscription():
         db = get_db()
         data = request.get_json() or {}
-        if not data.get("user_id") or not data.get("product_id"):
-            return jsonify({"error": "Missing user_id or product_id"}), 400
+        if not data.get("username") or not data.get("product_id"):
+            return jsonify({"error": "Missing username or product_id"}), 400
         
         new_sub = Subscription(
-            user_id=data["user_id"],
+            username=data["username"],
             product_id=data["product_id"]
         )
         db.add(new_sub)
