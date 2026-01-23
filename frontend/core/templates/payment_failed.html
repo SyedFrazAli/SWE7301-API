@@ -1,0 +1,94 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Failed - GeoScope Analytics</title>
+    <link rel="stylesheet" href="{% static 'signup.css' %}" />
+    <style>
+        /* Inline styles for specific tweaks, reusing signup.css classes */
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            display: block;
+            color: #EA4335;
+        }
+
+        .message-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .btn-retry {
+            background-color: #EA4335;
+            color: white;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn-retry:hover {
+            background-color: #d33c2f;
+        }
+
+        .home-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .home-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="signup-page">
+        <div class="signup-container">
+            <div class="signup-card">
+                <!-- Logo Section -->
+                <div class="logo-section">
+                    <div class="logo-circle">
+                        <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Analytics Logo" />
+                    </div>
+                </div>
+
+                <div id="failed-content">
+                    <svg class="error-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+
+                    <h1 class="title">Payment Failed</h1>
+
+                    <p class="message-text">
+                        We couldn't process your payment. Please try again or contact support if the problem persists.
+                    </p>
+
+                    <a href="{% url 'subscriptions' %}" class="btn-retry">Try Again</a>
+
+                    <a href="{% url 'dashboard' %}" class="home-link">Return to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

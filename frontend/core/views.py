@@ -426,3 +426,12 @@ def update_profile_view(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+def payment_success(request):
+    """Render payment success page"""
+    return render(request, "payment_success.html")
+
+
+def payment_failed(request):
+    """Render payment failed page"""
+    return render(request, "payment_failed.html")
