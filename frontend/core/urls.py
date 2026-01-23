@@ -22,4 +22,6 @@ urlpatterns = [
     path('setup-2fa-endpoint/', views.setup_2fa_json_view, name='setup_2fa_endpoint'),
     path('disable-2fa/', views.disable_2fa_view, name='disable_2fa'),
     path('update-profile/', views.update_profile_view, name='update_profile'),
+    path('payment-success/', views.payment_success, name='payment_success'),
+    path('payment-failed/', views.payment_failed, name='payment_failed'),
 ]
