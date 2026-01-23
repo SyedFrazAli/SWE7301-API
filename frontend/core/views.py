@@ -63,6 +63,7 @@ def signup_view(request):
         
         try:
             response = requests.post(f"{BACKEND_URL}/signup", json={
+                "username": request.POST.get("username"),
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
@@ -98,8 +99,8 @@ def dashboard(request):
         if prod_res.status_code == 200:
             products = prod_res.json()
         
-        # Fetch user's subscriptions
-        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"username": username}, headers=headers)
+        # Fetch user's subscriptions (backend expects user_id query parameter)
+        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": username}, headers=headers)
         if sub_res.status_code == 200:
             subscriptions = sub_res.json()
     except Exception as e:
@@ -109,7 +110,10 @@ def dashboard(request):
         "username": username,
         "products": products,
         "subscriptions": subscriptions,
-        "backend_connected": True if (products or subscriptions) else False
+        "backend_connected": True if (products or subscriptions) else False,
+        "access_token": access_token,
+        "refresh_token": request.session.get("refresh_token"),
+        "backend_url": BACKEND_URL
     })
 
 
@@ -131,8 +135,8 @@ def subscriptions(request):
         if prod_res.status_code == 200:
             products = prod_res.json()
         
-        # Fetch user's subscriptions
-        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"username": username}, headers=headers)
+        # Fetch user's subscriptions (backend expects user_id query parameter)
+        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": username}, headers=headers)
         if sub_res.status_code == 200:
             subscriptions = sub_res.json()
     except Exception as e:
@@ -155,7 +159,7 @@ def subscribe(request, product_id):
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
         requests.post(f"{BACKEND_URL}/api/subscriptions", json={
-            "username": username,
+            "user_id": username,
             "product_id": product_id
         }, headers=headers)
     except Exception as e:

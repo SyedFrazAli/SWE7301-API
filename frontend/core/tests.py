@@ -43,6 +43,46 @@ class ViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Welcome back, testuser")
 
+    def test_dashboard_contains_token_manager(self):
+        # When a user has tokens in session, the dashboard should show token manager UI
+        session = self.client.session
+        session['access_token'] = 'fake-jwt-token'
+        session['refresh_token'] = 'fake-refresh'
+        session['username'] = 'admin'
+        session.save()
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "JWT Token Management")
+        self.assertContains(response, 'id="accessToken"')
+        self.assertContains(response, 'id="refreshToken"')
+
+    def test_dashboard_includes_dashboard_css(self):
+        session = self.client.session
+        session['access_token'] = 'fake-jwt-token'
+        session['username'] = 'admin'
+        session.save()
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'dashboard.css')
+
+    @patch('requests.post')
+    def test_subscribe_posts_user_id(self, mock_post):
+        session = self.client.session
+        session['access_token'] = 'fake-jwt-token'
+        session['username'] = 'user123'
+        session.save()
+
+        response = self.client.get(reverse('subscribe', args=[5]))
+        # subscribe view redirects back to dashboard
+        self.assertEqual(response.status_code, 302)
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertIn('/api/subscriptions', args[0])
+        self.assertEqual(kwargs['json']['user_id'], 'user123')
+        self.assertEqual(kwargs['json']['product_id'], 5)
+
     @patch('requests.post')
     def test_login_view_failure(self, mock_post):
         # Mock failed backend response
@@ -57,3 +97,20 @@ class ViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Invalid username or password")
         self.assertNotIn('access_token', self.client.session)
+
+    @patch('requests.post')
+    def test_signup_posts_username(self, mock_post):
+        mock_post.return_value.status_code = 201
+        response = self.client.post(reverse('signup'), {
+            'first_name': 'Test',
+            'username': 'testuser',
+            'last_name': 'User',
+            'email': 'test@example.com',
+            'password': 'password'
+        })
+        # on success, signup view redirects to login
+        self.assertEqual(response.status_code, 302)
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertIn('/signup', args[0])
+        self.assertEqual(kwargs['json']['username'], 'testuser')
