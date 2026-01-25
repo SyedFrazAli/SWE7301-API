@@ -1,11 +1,13 @@
 # # US-14: Django Website - Basic Views
 import requests
-import os
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from .forms import LoginForm
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:5000")
+# Use settings-based backend URL so it's configurable per-environment
+BACKEND_URL = getattr(settings, "BACKEND_API_URL", "http://127.0.0.1:5000")
+REQUEST_TIMEOUT = 5  # seconds
 
 def index(request):
     """Landing page view"""
@@ -34,7 +36,7 @@ def login_view(request):
                     "password": request.POST.get("password")
                 }
 
-            response = requests.post(f"{BACKEND_URL}/login", json=data)
+            response = requests.post(f"{BACKEND_URL}/login", json=data, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 res_data = response.json()
@@ -73,7 +75,7 @@ def verify_login_otp_view(request):
             import json
             data = json.loads(request.body)
             
-            response = requests.post(f"{BACKEND_URL}/verify-login-otp", json=data)
+            response = requests.post(f"{BACKEND_URL}/verify-login-otp", json=data, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 res_data = response.json()
@@ -109,7 +111,7 @@ def verify_2fa_view(request):
             response = requests.post(f"{BACKEND_URL}/2fa/verify", json={
                 "email": email,
                 "otp_code": otp_code
-            })
+            }, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 res_data = response.json()
@@ -177,7 +179,7 @@ def verify_2fa_setup_view(request):
                 "email": email,
                 "otp_code": otp_code,
                 "setup_mode": True
-            })
+            }, headers={'Authorization': f'Bearer {access_token}'}, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 res_data = response.json()
@@ -210,7 +212,7 @@ def signup_view(request):
                     "password": request.POST.get("password")
                 }
 
-            response = requests.post(f"{BACKEND_URL}/signup", json=data)
+            response = requests.post(f"{BACKEND_URL}/signup", json=data, timeout=REQUEST_TIMEOUT)
             
             if response.status_code in [200, 201]:
                 return JsonResponse(response.json())
@@ -231,7 +233,7 @@ def verify_email_view(request):
             import json
             data = json.loads(request.body)
             
-            response = requests.post(f"{BACKEND_URL}/verify-email", json=data)
+            response = requests.post(f"{BACKEND_URL}/verify-email", json=data, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 res_data = response.json()
@@ -256,7 +258,9 @@ def dashboard(request):
     if not access_token:
         return redirect("login")
     
+    # username for display (first_name preferred), user_email for backend queries
     username = request.session.get("first_name") or request.session.get("username", "User")
+    user_email = request.session.get("username") or request.session.get("user_email")
     
     products = []
     subscriptions = []
@@ -264,14 +268,17 @@ def dashboard(request):
     
     try:
         # Fetch products
-        prod_res = requests.get(f"{BACKEND_URL}/api/products", headers=headers)
+        prod_res = requests.get(f"{BACKEND_URL}/api/products", headers=headers, timeout=REQUEST_TIMEOUT)
         if prod_res.status_code == 200:
             products = prod_res.json()
         
-        # Fetch user's subscriptions
-        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"username": username}, headers=headers)
-        if sub_res.status_code == 200:
-            subscriptions = sub_res.json()
+        # Fetch user's subscriptions (backend expects user_id)
+        if user_email:
+            sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": user_email}, headers=headers, timeout=REQUEST_TIMEOUT)
+            if sub_res.status_code == 200:
+                subscriptions = sub_res.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching dashboard data (request error): {e}")
     except Exception as e:
         print(f"Error fetching dashboard data: {e}")
 
@@ -279,7 +286,7 @@ def dashboard(request):
         "username": username,
         "products": products,
         "subscriptions": subscriptions,
-        "backend_connected": True if (products or subscriptions) else False
+        "backend_connected": prod_res.status_code == 200 if 'prod_res' in locals() else False
     })
 
 
@@ -289,7 +296,8 @@ def subscriptions(request):
     if not access_token:
         return redirect("login")
     
-    username = request.session.get("username", "User")
+    user_email = request.session.get("username") or request.session.get("user_email") or "User"
+    display_name = user_email.split('@')[0].capitalize() if user_email != "User" else "User"
     
     products = []
     subscriptions = []
@@ -297,19 +305,21 @@ def subscriptions(request):
     
     try:
         # Fetch products
-        prod_res = requests.get(f"{BACKEND_URL}/api/products", headers=headers)
+        prod_res = requests.get(f"{BACKEND_URL}/api/products", headers=headers, timeout=REQUEST_TIMEOUT)
         if prod_res.status_code == 200:
             products = prod_res.json()
         
-        # Fetch user's subscriptions
-        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"username": username}, headers=headers)
+        # Fetch user's subscriptions (backend expects user_id)
+        sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": user_email}, headers=headers, timeout=REQUEST_TIMEOUT)
         if sub_res.status_code == 200:
             subscriptions = sub_res.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching subscription data (request error): {e}")
     except Exception as e:
         print(f"Error fetching subscription data: {e}")
 
     return render(request, "subscriptions.html", {
-        "username": username,
+        "username": display_name,
         "products": products,
         "subscriptions": subscriptions
     })
@@ -321,13 +331,15 @@ def subscribe(request, product_id):
     if not access_token:
         return redirect("login")
     
-    username = request.session.get("username")
+    user_email = request.session.get("username") or request.session.get("user_email")
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
         requests.post(f"{BACKEND_URL}/api/subscriptions", json={
-            "username": username,
+            "user_id": user_email,
             "product_id": product_id
-        }, headers=headers)
+        }, headers=headers, timeout=REQUEST_TIMEOUT)
+    except requests.exceptions.RequestException as e:
+        print(f"Error subscribing (request error): {e}")
     except Exception as e:
         print(f"Error subscribing: {e}")
     
@@ -362,7 +374,7 @@ def settings(request):
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
         # Validate token and get fresh user info
-        response = requests.post(f"{BACKEND_URL}/token/validate", headers=headers)
+        response = requests.post(f"{BACKEND_URL}/token/validate", headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             user_info = response.json().get("user")
             return render(request, "settings.html", {"user_info": user_info})
@@ -378,7 +390,7 @@ def setup_2fa_json_view(request):
     
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
-        response = requests.post(f"{BACKEND_URL}/2fa/setup", headers=headers)
+        response = requests.post(f"{BACKEND_URL}/2fa/setup", headers=headers, timeout=REQUEST_TIMEOUT)
         return JsonResponse(response.json(), status=response.status_code)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -395,7 +407,7 @@ def disable_2fa_view(request):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
-        response = requests.post(f"{BACKEND_URL}/2fa/disable", headers=headers)
+        response = requests.post(f"{BACKEND_URL}/2fa/disable", headers=headers, timeout=REQUEST_TIMEOUT)
         return JsonResponse(response.json(), status=response.status_code)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -412,7 +424,7 @@ def update_profile_view(request):
             data = json.loads(request.body)
             
             headers = {"Authorization": f"Bearer {access_token}"}
-            response = requests.put(f"{BACKEND_URL}/api/profile", json=data, headers=headers)
+            response = requests.put(f"{BACKEND_URL}/api/profile", json=data, headers=headers, timeout=REQUEST_TIMEOUT)
             
             if response.status_code == 200:
                 # Update session

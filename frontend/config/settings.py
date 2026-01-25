@@ -163,3 +163,5 @@ AUTHENTICATION_BACKENDS = [
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+BACKEND_API_URL = "http://127.0.0.1:5000"
