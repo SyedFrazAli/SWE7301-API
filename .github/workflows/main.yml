@@ -1,37 +1,33 @@
-name: Python CI/CD Pipeline 
+name: Python CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flask sqlalchemy flask-jwt-extended pytest
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
 
-    - name: Configure environment
-      env:
-        PYTHONPATH: ${{ github.workspace }}/backend
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
-        python -c "from app.db import Base; from run import engine; import app.routes.observation; Base.metadata.create_all(engine)"
+      - name: Configure PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}/backend" >> $GITHUB_ENV
 
-    - name: Run Tests
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
-        pytest backend/tests/
+      - name: Run tests
+        run: |
+          pytest backend/tests/ --maxfail=1 --disable-warnings -v

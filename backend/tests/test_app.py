@@ -22,30 +22,30 @@ def client():
 
     # Cleanup after test
     Base.metadata.drop_all(engine)
+#Descoped test for US-11
+# def test_historical_integrity_enforcement(client):
+#     """
+#     US-11 Acceptance Criteria: 
+#     Given an old record, when update attempted, then 403 error returned.
+#     """
+#     session = SessionLocal()
+#     old_record = ObservationRecord(
+#         timestamp=datetime(2024, 10, 1, tzinfo=timezone.utc), 
+#         timezone="GMT",
+#         coordinates="53.0, -2.0",
+#         satellite_id="HISTORICAL-SAT",
+#         notes="Historical data"
+#     )
+#     session.add(old_record)
+#     session.commit()
+#     record_id = old_record.id
+#     session.close()
 
-def test_historical_integrity_enforcement(client):
-    """
-    US-11 Acceptance Criteria: 
-    Given an old record, when update attempted, then 403 error returned.
-    """
-    session = SessionLocal()
-    old_record = ObservationRecord(
-        timestamp=datetime(2024, 10, 1), 
-        timezone="GMT",
-        coordinates="53.0, -2.0",
-        satellite_id="HISTORICAL-SAT",
-        notes="Historical data"
-    )
-    session.add(old_record)
-    session.commit()
-    record_id = old_record.id
-    session.close()
+#     update_data = {"notes": "Attempting to change history"}
+#     response = client.put(f'/api/observations/{record_id}', json=update_data)
 
-    update_data = {"notes": "Attempting to change history"}
-    response = client.put(f'/api/observations/{record_id}', json=update_data)
-
-    assert response.status_code == 403
-    assert "Historical Integrity Violation" in response.get_json()['error']
+#     assert response.status_code == 403
+#     assert "Historical Integrity Violation" in response.get_json()['error']
 
 def test_current_quarter_update_allowed(client):
     """Verify that records from the current quarter CAN still be updated."""

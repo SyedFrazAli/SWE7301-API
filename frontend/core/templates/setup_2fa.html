@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup 2FA - GeoScope Analytics</title>
+    <link rel="stylesheet" href="{% static 'signup.css' %}" />
+</head>
+
+<body>
+    <div class="signup-page">
+        <div class="signup-container">
+            <div class="signup-card">
+                <div class="logo-section">
+                    <div class="logo-circle">
+                        <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Analytics Logo" />
+                    </div>
+                </div>
+
+                <h1 class="title">Secure Your Account</h1>
+                <p class="subtitle" style="text-align: center; margin-bottom: 24px;">Scan the QR code below with your
+                    authenticator app.</p>
+
+                <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                    <img id="qr-code-img" src="" alt="QR Code"
+                        style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; max-width: 200px;" />
+                </div>
+
+                <div id="secret-code"
+                    style="text-align: center; font-family: monospace; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 24px;">
+                    Loading secret...
+                </div>
+
+                <form id="verify-form" class="signup-form">
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="otp_code">Enter 6-digit Code</label>
+                        <input type="text" id="otp_code" name="otp_code" required maxlength="6" autocomplete="off"
+                            placeholder="123456" style="text-align: center; letter-spacing: 4px; font-size: 20px;" />
+                    </div>
+                    <button type="submit" class="btn-signup">Verify & Activate</button>
+                    <div id="error-msg" class="error" style="display: none; margin-top: 16px;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const qrImg = document.getElementById('qr-code-img');
+            const secretDiv = document.getElementById('secret-code');
+            const form = document.getElementById('verify-form');
+            const errorDiv = document.getElementById('error-msg');
+
+            // Fetch Setup Data
+            try {
+                const response = await fetch('{{ backend_url }}/2fa/setup', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer {{ access_token }}'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    qrImg.src = data.qr_code;
+                    secretDiv.innerText = data.secret;
+                } else {
+                    secretDiv.innerText = "Error loading 2FA setup";
+                }
+            } catch (e) {
+                console.error(e);
+                secretDiv.innerText = "Connection error";
+            }
+
+            // Verify
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const otp = document.getElementById('otp_code').value;
+
+                try {
+                    const response = await fetch('/verify-2fa-setup/', {
+                        method: 'POST',
+                        body: JSON.stringify({ otp_code: otp }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.href = result.redirect_url;
+                    } else {
+                        errorDiv.innerText = result.error;
+                        errorDiv.style.display = 'block';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    errorDiv.innerText = "An error occurred";
+                    errorDiv.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

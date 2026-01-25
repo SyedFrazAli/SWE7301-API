@@ -1,0 +1,48 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoScope Analytics - Real-Time Geospatial Intelligence</title>
+    <link rel="stylesheet" href="{% static 'landing.css' %}" />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <a href="{% url 'index' %}" class="brand">GeoScope Analytics</a>
+      <ul class="nav-links">
+        <li><a href="#solution">Solution</a></li>
+        <li><a href="#apis">Apis</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="{% url 'login' %}">Login</a></li>
+        <li><a href="{% url 'signup' %}">Register</a></li>
+      </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          Real-Time <span class="highlight">Geospatial</span> Intelligence for a
+          Changing Planet
+        </h1>
+        <p class="hero-subtitle">
+          Monitor Climate Impact, Land use, and environmental risks using
+          AI-powered satellite insights
+        </p>
+        <a href="{% url 'signup' %}" class="get-started-btn">Get Started</a>
+      </div>
+
+      <div class="hero-logo">
+        <div class="logo-container">
+          <img
+            src="{% static 'images/geoscope-logo.png' %}"
+            alt="GeoScope Analytics Logo"
+          />
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,285 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - GeoScope Analytics</title>
+    <link rel="stylesheet" href="{% static 'signup.css' %}" />
+    <style>
+        .settings-card {
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .status-enabled {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-disabled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <nav style="padding: 20px;">
+        <a href="{% url 'dashboard' %}" class="btn-signup"
+            style="width: auto; display: inline-block; padding: 10px 20px;">&larr; Back to Dashboard</a>
+    </nav>
+
+    <div class="signup-page">
+        <div class="signup-container">
+            <div class="signup-card settings-card">
+                <h1 class="title">Settings</h1>
+
+                <!-- Profile Section -->
+                <div class="setting-item" style="margin-top: 30px; margin-bottom: 40px;">
+                    <h3>Profile Information</h3>
+                    <form id="profile-form">
+                        <div class="field">
+                            <label>First Name</label>
+                            <input type="text" id="first_name" name="first_name" value="{{ user_info.first_name }}"
+                                class="field" style="width: 100%; padding: 8px;">
+                        </div>
+                        <div class="field" style="margin-top: 10px;">
+                            <label>Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value="{{ user_info.last_name }}"
+                                class="field" style="width: 100%; padding: 8px;">
+                        </div>
+                        <div class="field" style="margin-top: 10px;">
+                            <label>Email</label>
+                            <input type="email" id="email" name="email" value="{{ user_info.email }}" class="field"
+                                style="width: 100%; padding: 8px;" disabled title="Email updates coming soon">
+                        </div>
+                        <button type="submit" class="btn-signup" style="margin-top: 15px;">Save Changes</button>
+                        <div id="profile-msg" style="margin-top: 10px; font-weight: bold;"></div>
+                    </form>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+                <h1 class="title" style="font-size: 24px;">Security</h1>
+                <div class="setting-item" style="margin-top: 20px;">
+                    <h3>Authenticator App 2FA
+                        {% if user_info.is_2fa_enabled %}
+                        <span class="status-badge status-enabled">Enabled</span>
+                        {% else %}
+                        <span class="status-badge status-disabled">Disabled</span>
+                        {% endif %}
+                    </h3>
+                    <p>Use verification codes from an authenticator app (like Google Authenticator) for extra security.
+                    </p>
+
+                    {% if user_info.is_2fa_enabled %}
+                    <button id="btn-disable-2fa" class="btn-signup"
+                        style="background-color: #dc3545; margin-top: 20px;">Disable 2FA</button>
+                    {% else %}
+                    <button id="btn-enable-2fa" class="btn-signup" style="margin-top: 20px;">Enable 2FA</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enable 2FA Modal -->
+    <div id="enableModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 class="title">Setup Authenticator App</h2>
+            <div id="qr-loading">Loading...</div>
+            <div id="qr-content" style="display:none; text-align: center;">
+                <p>Scan this QR code with your authenticator app:</p>
+                <img id="qr-image" src="" alt="QR Code" style="max-width: 200px; margin: 20px 0;" />
+                <p>Then enter the 6-digit code below:</p>
+                <input type="text" id="setup-otp" class="field" style="width: 100%; padding: 10px; margin: 10px 0;"
+                    placeholder="123456" />
+                <button id="btn-verify-enable" class="btn-signup">Verify & Enable</button>
+                <div id="setup-error" class="error" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnEnable = document.getElementById('btn-enable-2fa');
+            const btnDisable = document.getElementById('btn-disable-2fa');
+            const modal = document.getElementById('enableModal');
+            const closeSpan = document.getElementsByClassName("close")[0];
+
+            // Profile Update
+            const profileForm = document.getElementById('profile-form');
+            if (profileForm) {
+                profileForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const firstName = document.getElementById('first_name').value;
+                    const lastName = document.getElementById('last_name').value;
+                    const msgDiv = document.getElementById('profile-msg');
+
+                    msgDiv.innerText = "Saving...";
+                    msgDiv.style.color = "#666";
+
+                    try {
+                        const response = await fetch('/update-profile/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                first_name: firstName,
+                                last_name: lastName
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            msgDiv.innerText = "Profile updated successfully!";
+                            msgDiv.style.color = "green";
+                            setTimeout(() => { msgDiv.innerText = ""; }, 3000);
+                        } else {
+                            msgDiv.innerText = data.error || "Update failed";
+                            msgDiv.style.color = "red";
+                        }
+                    } catch (e) {
+                        msgDiv.innerText = "Network error";
+                        msgDiv.style.color = "red";
+                    }
+                });
+            }
+
+            // disable
+            if (btnDisable) {
+                btnDisable.addEventListener('click', async () => {
+                    if (!confirm("Are you sure you want to disable 2FA?")) return;
+
+                    try {
+                        const response = await fetch('/disable-2fa/', { // Need to add to urls
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            }
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert(data.msg || "Error disabling 2FA");
+                        }
+                    } catch (e) {
+                        alert("Network error");
+                    }
+                });
+            }
+
+            // enable
+            if (btnEnable) {
+                btnEnable.addEventListener('click', () => {
+                    modal.style.display = "block";
+                    fetchQR();
+                });
+            }
+
+            if (closeSpan) {
+                closeSpan.onclick = function () {
+                    modal.style.display = "none";
+                }
+            }
+            window.onclick = function (event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+
+            async function fetchQR() {
+                const response = await fetch('/setup-2fa-endpoint/'); // Need to ensure this returns JSON
+                const data = await response.json();
+                if (data.qr_code) {
+                    document.getElementById('qr-loading').style.display = 'none';
+                    document.getElementById('qr-content').style.display = 'block';
+                    document.getElementById('qr-image').src = data.qr_code;
+                }
+            }
+
+            const btnVerifyEnable = document.getElementById('btn-verify-enable');
+            if (btnVerifyEnable) {
+                btnVerifyEnable.addEventListener('click', async () => {
+                    const otp = document.getElementById('setup-otp').value;
+                    const errorDiv = document.getElementById('setup-error');
+
+                    try {
+                        const response = await fetch('/verify-2fa-setup/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ otp_code: otp })
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            errorDiv.textContent = data.msg || data.error || "Invalid code";
+                        }
+                    } catch (e) {
+                        errorDiv.textContent = "Network error";
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

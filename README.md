@@ -13,7 +13,7 @@ This repository contains the backend infrastructure and functional modules for m
 - **US-22: ORM for API** — ✅ Done (Implemented via SQLAlchemy)
 - **US-23: GitHub Source Control** — ✅ Done
 - **US-19: SQLite for Development** — ✅ Done (Universal compatibility)
-- **US-25: CI/CD Pipeline** — ⏳ In Progress (GitHub Actions)
+- **US-25: CI/CD Pipeline** — ✅ Done
 
 ### 🛰 Attiq-ur-Rehman (Functional Features)
 
@@ -25,7 +25,8 @@ This repository contains the backend infrastructure and functional modules for m
 * **US-05: Flask API Framework** — ✅ Done
 * **US-06: API Documentation** — ✅ Done
 * **US-13: JWT Authentication** — ✅ Done
-* **US-24: Test-Driven Development** — 📅 Sprint Backlog
+* **US-24: Test-Driven Development** — ✅ Done
+* **US-14:Django Website** — 📅 Sprint Backlog
 
 ### 📝 Toluwalope Otegbeye
 * **US-07: HTTP Methods** — ✅ Done

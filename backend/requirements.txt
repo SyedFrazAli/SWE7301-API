@@ -1,0 +1,15 @@
+flask==3.1.2
+flask-cors==6.0.2
+flask-jwt-extended==4.7.1
+flask-sqlalchemy==3.1.1
+sqlalchemy==2.0.45
+gunicorn==23.0.0
+flasgger==0.9.7.1
+pytest==9.0.2
+Authlib==1.4.0
+requests==2.32.3
+python-dotenv
+pyotp
+qrcode
+flask-talisman
+flask-limiter
