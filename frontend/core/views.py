@@ -7,7 +7,7 @@ from .forms import LoginForm
 
 # Use settings-based backend URL so it's configurable per-environment
 BACKEND_URL = getattr(settings, "BACKEND_API_URL", "http://127.0.0.1:5000")
-REQUEST_TIMEOUT = 5  # seconds
+REQUEST_TIMEOUT = 30  # seconds
 
 def index(request):
     """Landing page view"""
@@ -215,9 +215,21 @@ def signup_view(request):
             response = requests.post(f"{BACKEND_URL}/signup", json=data, timeout=REQUEST_TIMEOUT)
             
             if response.status_code in [200, 201]:
-                return JsonResponse(response.json())
+                if request.content_type == 'application/json':
+                    return JsonResponse(response.json())
+                # Standard Form: Redirect to Verify Email or Login
+                # Since backend sends OTP, we typically show the verify page. 
+                # For simplicity in this fix, we can assume the user needs to check email and verification is done via a separate page or similar flow.
+                # However, the JS flow expects JSON to switch to OTP view.
+                # If JS is missing, we might need a dedicated "verify-otp" page.
+                # Ideally, just render signup with a success context if no JS?
+                # or redirect to login with a message?
+                return render(request, "signup.html", {"error": "Account created! Please verify your email using the code sent.", "success": True})
             else:
-                return JsonResponse(response.json(), status=response.status_code)
+                msg = response.json().get("msg", "Signup failed")
+                if request.content_type == 'application/json':
+                    return JsonResponse(response.json(), status=response.status_code)
+                return render(request, "signup.html", {"error": msg})
                 
         except requests.exceptions.RequestException as e:
             if request.content_type == 'application/json':
@@ -522,3 +534,13 @@ def payment_success(request):
 def payment_failed(request):
     """Render payment failed page"""
     return render(request, "payment_failed.html")
+
+
+def analytics(request):
+    """Analytics view protected by session token"""
+    access_token = request.session.get("access_token")
+    if not access_token:
+        return redirect("login")
+    
+    username = request.session.get("username", "User")
+    return render(request, "analytics.html", {"username": username})
