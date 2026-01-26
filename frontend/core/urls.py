@@ -10,6 +10,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('subscriptions/', views.subscriptions, name='subscriptions'),
     path('dashboard/update-token/', views.update_token_view, name='update_token'),
+    path('observations/', views.observations, name='observations'),
     path('satellites/', views.satellites, name='satellites'),
     path('observations/', views.observations, name='observations'),
     path('analytics/', views.analytics, name='analytics'),

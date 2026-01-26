@@ -365,34 +365,49 @@ def subscriptions(request):
         return redirect("login")
     
     user_email = request.session.get("username") or request.session.get("user_email") or "User"
-    display_name = user_email.split('@')[0].capitalize() if user_email != "User" else "User"
+    # Display name logic
+    display_name = request.session.get("first_name") or user_email.split('@')[0].capitalize()
     
     products = []
     subscriptions = []
+    pro_plan = None
     headers = {"Authorization": f"Bearer {access_token}"}
     
     try:
-        # Fetch products
+        
         prod_res = requests.get(f"{BACKEND_URL}/api/products", headers=headers, timeout=REQUEST_TIMEOUT)
         if prod_res.status_code == 200:
             all_products = prod_res.json()
-            # Separate Pro Plan (ID 9) from others
+            
+            
+            product_map = {p['id']: p for p in all_products}
+
+           
             products = [p for p in all_products if p['id'] != 9]
             pro_plan = next((p for p in all_products if p['id'] == 9), None)
         else:
-             pro_plan = None
+            all_products = []
+            product_map = {}
         
-        # Fetch user's subscriptions (backend expects user_id)
+      
         sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": user_email}, headers=headers, timeout=REQUEST_TIMEOUT)
         if sub_res.status_code == 200:
-            subscriptions = sub_res.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching subscription data (request error): {e}")
-        pro_plan = None
-    except Exception as e:
-        print(f"Error fetching subscription data: {e}")
-        pro_plan = None
+            raw_subs = sub_res.json()
+            
+           
+            for sub in raw_subs:
+                p_id = sub.get('product_id')
+                
+                sub['product'] = product_map.get(p_id, {
+                    "name": f"Product #{p_id}", 
+                    "description": "Details unavailable", 
+                    "price": "N/A"
+                })
+            subscriptions = raw_subs
 
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching subscription data: {e}")
+        
     return render(request, "subscriptions.html", {
         "username": display_name,
         "products": products,
