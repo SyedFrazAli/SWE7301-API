@@ -10,6 +10,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('subscriptions/', views.subscriptions, name='subscriptions'),
     path('dashboard/update-token/', views.update_token_view, name='update_token'),
+    path('observations/', views.observations, name='observations'),
     path('satellites/', views.satellites, name='satellites'),
     path('subscribe/<int:product_id>/', views.subscribe, name='subscribe'),
     path('verify-2fa-endpoint/', views.verify_2fa_view, name='verify_2fa_endpoint'),
