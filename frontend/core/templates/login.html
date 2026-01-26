@@ -1,245 +1,364 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - GeoScope Analytics</title>
-    <link rel="stylesheet" href="{% static 'signup.css' %}" />
-    <style>
-        .otp-section {
-            display: none;
-        }
+{% block title %}Login - GeoScope Analytics{% endblock %}
 
-        .login-card {
-            padding: 40px;
-        }
-    </style>
-</head>
+{% block extra_css %}
+<style>
+    /* Auth Page specific overrides to center content */
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+    }
 
-<body>
-    <div class="signup-page"> <!-- Using same wrapper class for consistency -->
-        <div class="signup-container">
-            <div class="signup-card login-card">
-                <!-- Logo Section -->
-                <div class="logo-section">
-                    <div class="logo-circle">
-                        <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Analytics Logo" />
-                    </div>
+    .auth-card {
+        background: var(--surface);
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 480px;
+    }
+
+    .logo-circle {
+        width: 64px;
+        height: 64px;
+        background: #eff6ff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+    }
+
+    .logo-circle img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .auth-title {
+        font-size: 28px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 32px;
+        color: var(--text-main);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text-main);
+        font-size: 14px;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: 16px;
+        font-family: inherit;
+        background: var(--background);
+        color: var(--text-main);
+        transition: all 0.2s;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .btn-auth {
+        width: 100%;
+        padding: 14px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 12px;
+    }
+
+    .btn-auth:hover {
+        background: var(--primary-dark);
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 24px 0;
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .divider::before {
+        margin-right: .5em;
+    }
+
+    .divider::after {
+        margin-left: .5em;
+    }
+
+    .google-btn {
+        width: 100%;
+        padding: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-weight: 500;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .google-btn:hover {
+        background: var(--background);
+        border-color: var(--primary);
+    }
+
+    .auth-link {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+
+    .auth-link a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .error-msg {
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="logo-circle">
+            <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Logo" style="width: 40px; height: 40px;">
+        </div>
+
+        <h1 class="auth-title" id="form-title">Welcome Back</h1>
+
+        <div id="error-container">
+            {% if error %}
+            <div class="error-msg">{{ error }}</div>
+            {% endif %}
+        </div>
+
+        <form method="post" id="login-form">
+            {% csrf_token %}
+
+            <div id="credentials-section">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="name@example.com" />
                 </div>
 
-                <h1 class="title" id="form-title">Welcome Back</h1>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password" />
+                </div>
 
-                {% if error %}
-                <div class="error">{{ error }}</div>
-                {% endif %}
-
-                <form method="post" id="login-form" class="signup-form">
-                    {% csrf_token %}
-
-                    <div id="credentials-section">
-                        <div class="field">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required />
-                        </div>
-
-                        <div class="field">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password" required />
-                        </div>
-
-                        <button type="submit" class="btn-signup">Login</button>
-                    </div>
-
-                    <div id="email-otp-section" class="otp-section" style="display: none;">
-                        <h2 class="subtitle">Email Verification</h2>
-                        <p class="subtitle" style="margin-bottom: 20px;">
-                            We've sent a code to <span id="email-display" style="font-weight: bold;"></span>
-                        </p>
-                        <div class="field">
-                            <label for="email_otp">Email Code</label>
-                            <input type="text" id="email_otp" name="email_otp" placeholder="123456" maxlength="6" />
-                        </div>
-                        <button type="button" id="verify-email-otp-btn" class="btn-signup">Verify Email Code</button>
-                    </div>
-
-                    <div id="totp-section" class="otp-section" style="display: none;">
-                        <h2 class="subtitle">Authenticator App</h2>
-                        <p class="subtitle" style="margin-bottom: 20px;">Please enter the code from your authenticator
-                            app.</p>
-                        <div class="field">
-                            <label for="totp_code">Authenticator Code</label>
-                            <input type="text" id="totp_code" name="totp_code" placeholder="123456" maxlength="6" />
-                        </div>
-                        <button type="button" id="verify-totp-btn" class="btn-signup">Verify App Code</button>
-                    </div>
-
-                    <div class="login-link">
-                        Don't have an account? <a href="{% url 'signup' %}">Sign up</a>
-                    </div>
-
-                    <div class="divider">Or</div>
-
-                    <button type="button" class="google-btn" id="google-login-btn">
-                        <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                fill="#4285F4" />
-                            <path
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                fill="#34A853" />
-                            <path
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                fill="#FBBC05" />
-                            <path
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                fill="#EA4335" />
-                        </svg>
-                        <span>Continue with Google</span>
-                    </button>
-                </form>
+                <button type="submit" class="btn-auth">Sign In</button>
             </div>
-        </div>
+
+            <div id="email-otp-section" style="display: none;">
+                <h2 style="font-size:20px; text-align:center; margin-bottom:16px;">Verify Email</h2>
+                <p style="text-align:center; color:var(--text-muted); margin-bottom:24px;">Code sent to <span
+                        id="email-display" style="font-weight:700;"></span></p>
+
+                <div class="form-group">
+                    <label for="email_otp">Enter 6-digit Code</label>
+                    <input type="text" id="email_otp" maxlength="6"
+                        style="text-align:center; letter-spacing:4px; font-size:20px;">
+                </div>
+
+                <button type="button" id="verify-email-otp-btn" class="btn-auth">Verify Code</button>
+            </div>
+
+            <div id="totp-section" style="display: none;">
+                <h2 style="font-size:20px; text-align:center; margin-bottom:16px;">Authenticator Check</h2>
+                <p style="text-align:center; color:var(--text-muted); margin-bottom:24px;">Enter the code from your app.
+                </p>
+
+                <div class="form-group">
+                    <label for="totp_code">Authenticator Code</label>
+                    <input type="text" id="totp_code" maxlength="6"
+                        style="text-align:center; letter-spacing:4px; font-size:20px;">
+                </div>
+
+                <button type="button" id="verify-totp-btn" class="btn-auth">Verify 2FA</button>
+            </div>
+
+            <div id="login-footer">
+                <div class="auth-link">
+                    Don't have an account? <a href="{% url 'signup' %}">Sign up</a>
+                </div>
+
+                <div class="divider">Or continue with</div>
+
+                <button type="button" class="google-btn" id="google-login-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            fill="#4285F4" />
+                        <path
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            fill="#34A853" />
+                        <path
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            fill="#EA4335" />
+                    </svg>
+                    Google
+                </button>
+            </div>
+        </form>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            const credentialsSection = document.getElementById('credentials-section');
-            const emailOtpSection = document.getElementById('email-otp-section');
-            const totpSection = document.getElementById('totp-section');
-            const emailDisplay = document.getElementById('email-display');
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Toggle sidebar OFF for auth pages if desired, or leave as simple nav
+        document.querySelector('.sidebar').style.display = 'none'; // Optional: hide sidebar on login
+        document.querySelector('.mobile-toggle').style.display = 'none';
+        document.querySelector('.main-content').style.marginLeft = '0';
+        document.querySelector('.main-content').style.padding = '20px';
 
-            const verifyEmailOtpBtn = document.getElementById('verify-email-otp-btn');
-            const verifyTotpBtn = document.getElementById('verify-totp-btn');
-            const googleLoginBtn = document.getElementById('google-login-btn');
+        const loginForm = document.getElementById('login-form');
+        const credentialsSection = document.getElementById('credentials-section');
+        const emailOtpSection = document.getElementById('email-otp-section');
+        const totpSection = document.getElementById('totp-section');
+        const loginFooter = document.getElementById('login-footer');
 
-            let currentEmail = "";
+        const verifyEmailOtpBtn = document.getElementById('verify-email-otp-btn');
+        const verifyTotpBtn = document.getElementById('verify-totp-btn');
+        let currentEmail = "";
 
-            // 1. Submit Credentials
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const emailInput = document.getElementById('email');
-                const passwordInput = document.getElementById('password');
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('email').value;
+            const passwordInput = document.getElementById('password').value;
+            currentEmail = emailInput;
 
-                currentEmail = emailInput.value;
+            try {
+                const response = await fetch('', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({ email: emailInput, password: passwordInput })
+                });
+                const data = await response.json();
 
-                try {
-                    const response = await fetch('', { // Post to current URL (login view)
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        },
-                        body: JSON.stringify({
-                            email: emailInput.value,
-                            password: passwordInput.value
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        if (data.otp_required) {
-                            // Step 2: Show Email OTP
-                            credentialsSection.style.display = 'none';
-                            emailOtpSection.style.display = 'block';
-                            emailDisplay.textContent = currentEmail;
-                            document.querySelector('.google-btn').style.display = 'none';
-                            document.querySelector('.divider').style.display = 'none';
-                            document.querySelector('.login-link').style.display = 'none';
-                        } else if (data.redirect_url) {
-                            window.location.href = data.redirect_url;
-                        }
-                    } else {
-                        showError(data.error || "Login failed");
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showError("An error occurred");
-                }
-            });
-
-            // 2. Verify Email OTP
-            verifyEmailOtpBtn.addEventListener('click', async () => {
-                const otp = document.getElementById('email_otp').value;
-                if (!otp) return showError("Enter code");
-
-                try {
-                    const response = await fetch('/verify-login-otp/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        },
-                        body: JSON.stringify({ email: currentEmail, otp: otp })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        if (data.totp_required) {
-                            // Step 3: Show TOTP
-                            emailOtpSection.style.display = 'none';
-                            totpSection.style.display = 'block';
-                        } else if (data.redirect_url) {
-                            window.location.href = data.redirect_url;
-                        }
-                    } else {
-                        showError(data.msg || "Invalid code");
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showError("Verification failed");
-                }
-            });
-
-            // 3. Verify TOTP (if optional 2FA enabled)
-            verifyTotpBtn.addEventListener('click', async () => {
-                const otp = document.getElementById('totp_code').value;
-                if (!otp) return showError("Enter code");
-
-                try {
-                    const response = await fetch('/verify-2fa-endpoint/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        },
-                        body: JSON.stringify({ email: currentEmail, otp_code: otp })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
+                if (response.ok) {
+                    if (data.otp_required) {
+                        credentialsSection.style.display = 'none';
+                        loginFooter.style.display = 'none';
+                        emailOtpSection.style.display = 'block';
+                        document.getElementById('email-display').textContent = emailInput;
+                    } else if (data.redirect_url) {
                         window.location.href = data.redirect_url;
-                    } else {
-                        showError(data.error || "Invalid code");
                     }
-                } catch (err) {
-                    console.error(err);
-                    showError("Verification failed");
+                } else {
+                    showError(data.error || data.msg || "Login failed");
                 }
-            });
-
-            // Google Login
-            googleLoginBtn.addEventListener('click', async () => {
-                window.location.href = '/google-login-endpoint/';
-            });
-
-            function showError(msg) {
-                let errorDiv = document.querySelector(".error");
-                if (!errorDiv) {
-                    errorDiv = document.createElement("div");
-                    errorDiv.className = "error";
-                    const container = document.querySelector(".login-card");
-                    container.insertBefore(errorDiv, container.querySelector("h1").nextSibling);
-                }
-                errorDiv.textContent = msg;
+            } catch (err) {
+                showError("Connection error");
             }
         });
-    </script>
-</body>
 
-</html>
+        verifyEmailOtpBtn.addEventListener('click', async () => {
+            const otp = document.getElementById('email_otp').value;
+            try {
+                const response = await fetch('/verify-login-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({ email: currentEmail, otp: otp })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.totp_required) {
+                        emailOtpSection.style.display = 'none';
+                        totpSection.style.display = 'block';
+                    } else if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+                } else {
+                    showError(data.msg || "Invalid code");
+                }
+            } catch (err) {
+                showError("Verification failed");
+            }
+        });
+
+        verifyTotpBtn.addEventListener('click', async () => {
+            const otp = document.getElementById('totp_code').value;
+            try {
+                const response = await fetch('/verify-2fa-endpoint/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({ email: currentEmail, otp_code: otp })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    showError(data.error || "Invalid code");
+                }
+            } catch (e) {
+                showError("Verification error");
+            }
+        });
+
+        document.getElementById('google-login-btn').addEventListener('click', () => {
+            window.location.href = '/google-login-endpoint/';
+        });
+
+        function showError(msg) {
+            const container = document.getElementById('error-container');
+            container.innerHTML = `<div class="error-msg">${msg}</div>`;
+        }
+    });
+</script>
+{% endblock %}

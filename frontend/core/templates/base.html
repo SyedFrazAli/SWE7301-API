@@ -41,6 +41,7 @@
             color: var(--text-main);
             display: flex;
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Sidebar - Premium Dark */
@@ -54,8 +55,8 @@
             gap: 40px;
             position: fixed;
             height: 100vh;
-            border-right: 1px solid #1e293b;
-            transition: transform 0.3s ease;
+            border-right: 1px solid var(--border);
+            transition: transform 0.3s ease, background-color 0.3s ease;
             z-index: 1000;
         }
 
@@ -63,7 +64,8 @@
             font-size: 24px;
             font-weight: 700;
             letter-spacing: -0.5px;
-            color: #3b82f6;
+            color: var(--accent);
+            /* Changed from primary */
             display: flex;
             align-items: center;
             gap: 12px;
@@ -167,8 +169,8 @@
             box-shadow:
                 0 4px 6px -1px rgba(0, 0, 0, 0.05),
                 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid #e2e8f0;
-            transition: transform 0.2s;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, background-color 0.3s ease;
         }
 
         .user-profile:hover {
@@ -189,6 +191,8 @@
             color: white;
             font-weight: 600;
             font-size: 16px;
+            border: 1px solid var(--border);
+            /* Add border for contrast */
         }
 
         .status-badge {
@@ -215,7 +219,7 @@
             border-radius: 20px;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid var(--border);
             position: relative;
             overflow: hidden;
         }
@@ -254,7 +258,7 @@
             background: var(--surface);
             padding: 32px;
             border-radius: 24px;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid var(--border);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
@@ -269,6 +273,7 @@
             margin: 0;
             font-size: 20px;
             font-weight: 700;
+            color: var(--text-main);
         }
 
         /* Product Cards */
@@ -281,7 +286,7 @@
 
         .product-card {
             background: var(--surface);
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border);
             border-radius: 16px;
             padding: 24px;
             transition: all 0.3s;
@@ -294,6 +299,16 @@
             border-color: var(--primary);
             box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.2);
             transform: translateY(-2px);
+        }
+
+        .brand {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .product-price {
@@ -359,6 +374,31 @@
             cursor: pointer;
         }
 
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 2000;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
         /* Responsive Media Queries */
         @media (max-width: 768px) {
             .sidebar {
@@ -377,6 +417,13 @@
 
             .mobile-toggle {
                 display: block;
+            }
+
+            .theme-toggle {
+                left: auto;
+                right: 24px;
+                bottom: 80px;
+                /* Above potential fab or bottom nav if added later */
             }
 
             .grid-layout {
@@ -407,6 +454,15 @@
             }
         }
     </style>
+    <script>
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -417,7 +473,7 @@
 
     <div class="sidebar">
         <div class="brand">
-            <div style="width:32px; height:32px; background:var(--primary); border-radius:8px;"></div>
+            <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope" style="width: 32px; height: 32px;">
             <span>GeoScope</span>
         </div>
         <nav class="nav-links">
@@ -442,7 +498,7 @@
                 <span>Settings</span>
             </a>
         </nav>
-        <a href="/login/" class="btn-logout">
+        <a href="{% url 'index' %}" class="btn-logout">
             <span>Log Out</span>
         </a>
     </div>

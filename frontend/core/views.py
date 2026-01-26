@@ -9,6 +9,26 @@ from .forms import LoginForm
 BACKEND_URL = getattr(settings, "BACKEND_API_URL", "http://127.0.0.1:5000")
 REQUEST_TIMEOUT = 30  # seconds
 
+def _get_plan_name(user_email, headers):
+    """Helper to fetch subscriptions and determine plan name"""
+    plan_name = "Free Plan"
+    try:
+        if user_email:
+            sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": user_email}, headers=headers, timeout=REQUEST_TIMEOUT)
+            if sub_res.status_code == 200:
+                subscriptions = sub_res.json()
+                if subscriptions:
+                    # Check for Pro Plan (ID 5)
+                    has_pro = any(s.get('product_id') == 5 for s in subscriptions)
+                    if has_pro:
+                        plan_name = "Pro Plan"
+                    else:
+                        # If has subscriptions but not Pro
+                        plan_name = "Standard Plan"
+    except Exception as e:
+        print(f"Error determining plan name: {e}")
+    return plan_name
+
 def index(request):
     """Landing page view"""
     return render(request, 'index.html')
@@ -79,6 +99,7 @@ def verify_login_otp_view(request):
             
             if response.status_code == 200:
                 res_data = response.json()
+                print(f"DEBUG FRONTEND: verify-login-otp response: {res_data}")
                 
                 if res_data.get("totp_required"):
                     # Authenticator App Check Required
@@ -173,6 +194,7 @@ def verify_2fa_setup_view(request):
         data = json.loads(request.body)
         otp_code = data.get("otp_code")
         email = request.session.get("username")
+        access_token = request.session.get("access_token")
         
         try:
             response = requests.post(f"{BACKEND_URL}/2fa/verify", json={
@@ -270,20 +292,27 @@ def observations(request):
     if not access_token:
         return redirect("login")
     
-    username = request.session.get("username", "User")
+    username = request.session.get("first_name") or request.session.get("username", "User")
+    backend_username = request.session.get("username") # For API calls
     observations_data = []
     headers = {"Authorization": f"Bearer {access_token}"}
     
     try:
         # Fetching observations from your backend API
-        response = requests.get(f"{BACKEND_URL}/api/observations", params={"username": username}, headers=headers)
+        response = requests.get(f"{BACKEND_URL}/api/observations", params={"username": backend_username}, headers=headers)
         if response.status_code == 200:
             observations_data = response.json()
+            
+        # Get Plan Name
+        plan_name = _get_plan_name(backend_username, headers)
+            
     except Exception as e:
         print(f"Error fetching observations: {e}")
+        plan_name = "Free Plan"
 
     return render(request, "observations.html", {
         "username": username,
+        "plan_name": plan_name,
         "observations": observations_data
     })
 
@@ -293,7 +322,11 @@ def satellites(request):
     if not access_token:
         return redirect("login")
     
-    username = request.session.get("username", "User")
+    username = request.session.get("first_name") or request.session.get("username", "User")
+    backend_username = request.session.get("username")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    plan_name = _get_plan_name(backend_username, headers)
     
     # Example data structure - replace with API call later
     satellite_list = [
@@ -305,6 +338,7 @@ def satellites(request):
 
     return render(request, "satellites.html", {
         "username": username,
+        "plan_name": plan_name,
         "satellites": satellite_list
     })
 
@@ -315,9 +349,10 @@ def dashboard(request):
     if not access_token:
         return redirect("login")
     
-    # username for display (first_name preferred), user_email for backend queries
-    username = request.session.get("first_name") or request.session.get("username", "User")
-    user_email = request.session.get("username") or request.session.get("user_email")
+    # User identity for display
+    display_name = request.session.get("first_name", "User")
+    # User identity for API calls
+    user_email = request.session.get("username")
     
     products = []
     subscriptions = []
@@ -334,15 +369,9 @@ def dashboard(request):
             sub_res = requests.get(f"{BACKEND_URL}/api/subscriptions", params={"user_id": user_email}, headers=headers, timeout=REQUEST_TIMEOUT)
             if sub_res.status_code == 200:
                 subscriptions = sub_res.json()
+        
         # Determine Plan Name
-        plan_name = "Free Plan"
-        if subscriptions:
-             # Check for Pro Plan (ID 5)
-             has_pro = any(s.get('product_id') == 5 for s in subscriptions)
-             if has_pro:
-                 plan_name = "Pro Plan"
-             else:
-                 plan_name = "Standard Plan"
+        plan_name = _get_plan_name(user_email, headers)
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching dashboard data (request error): {e}")
@@ -350,7 +379,7 @@ def dashboard(request):
         print(f"Error fetching dashboard data: {e}")
 
     return render(request, "dashboard.html", {
-        "username": username,
+        "username": display_name,
         "plan_name": plan_name,
         "products": products,
         "subscriptions": subscriptions,
@@ -364,9 +393,9 @@ def subscriptions(request):
     if not access_token:
         return redirect("login")
     
-    user_email = request.session.get("username") or request.session.get("user_email") or "User"
+    user_email = request.session.get("username")
     # Display name logic
-    display_name = request.session.get("first_name") or user_email.split('@')[0].capitalize()
+    display_name = request.session.get("first_name", "User")
     
     products = []
     subscriptions = []
@@ -404,12 +433,16 @@ def subscriptions(request):
                     "price": "N/A"
                 })
             subscriptions = raw_subs
+            
+        plan_name = _get_plan_name(user_email, headers)
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching subscription data: {e}")
+        plan_name = "Free Plan"
         
     return render(request, "subscriptions.html", {
         "username": display_name,
+        "plan_name": plan_name,
         "products": products,
         "pro_plan": pro_plan,
         "subscriptions": subscriptions
@@ -479,7 +512,15 @@ def settings(request):
         response = requests.post(f"{BACKEND_URL}/token/validate", headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             user_info = response.json().get("user")
-            return render(request, "settings.html", {"user_info": user_info})
+            
+            # Fetch plan name for header
+            user_email = user_info.get("email")
+            plan_name = _get_plan_name(user_email, headers)
+            
+            return render(request, "settings.html", {
+                "user_info": user_info,
+                "plan_name": plan_name
+            })
     except:
         pass
     return redirect("login")
@@ -493,8 +534,18 @@ def setup_2fa_json_view(request):
     headers = {"Authorization": f"Bearer {access_token}"}
     try:
         response = requests.post(f"{BACKEND_URL}/2fa/setup", headers=headers, timeout=REQUEST_TIMEOUT)
+        print(f"Backend Response Status: {response.status_code}")
+        print(f"Backend Response Content: {response.text}")
+        if response.status_code != 200:
+             # Try to decode JSON, fallback to text
+             try:
+                 return JsonResponse(response.json(), status=response.status_code)
+             except:
+                 return JsonResponse({"error": response.text}, status=response.status_code)
+        
         return JsonResponse(response.json(), status=response.status_code)
     except Exception as e:
+        print(f"Frontend View Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 def disable_2fa_view(request):

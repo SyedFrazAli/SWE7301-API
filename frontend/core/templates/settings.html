@@ -116,7 +116,7 @@
 
                 {% if user_info.is_2fa_enabled %}
                 <button id="btn-disable-2fa" class="btn-signup"
-                    style="background-color: #dc3545; margin-top: 20px;">Disable 2FA</button>
+                    style="background-color: var(--danger); margin-top: 20px;">Disable 2FA</button>
                 {% else %}
                 <button id="btn-enable-2fa" class="btn-signup" style="margin-top: 20px;">Enable 2FA</button>
                 {% endif %}
@@ -135,9 +135,10 @@
             <p>Scan this QR code with your authenticator app:</p>
             <img id="qr-image" src="" alt="QR Code" style="max-width: 200px; margin: 20px 0;" />
             <p>Then enter the 6-digit code below:</p>
-            <input type="text" id="setup-otp" class="field" style="width: 100%; padding: 10px; margin: 10px 0;"
+            <input type="text" id="setup-otp" class="field"
+                style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px;"
                 placeholder="123456" />
-            <button id="btn-verify-enable" class="btn-signup">Verify & Enable</button>
+            <button id="btn-verify-enable" class="btn-signup" style="width: 100%;">Verify & Enable</button>
             <div id="setup-error" class="error" style="margin-top: 10px;"></div>
         </div>
     </div>

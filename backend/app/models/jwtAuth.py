@@ -236,6 +236,7 @@ def register(app):
             db.commit()
 
             # Check if Authenticator App 2FA is enabled
+            print(f"DEBUG: User {user.email} is_2fa_enabled={user.is_2fa_enabled}")
             if user.is_2fa_enabled:
                  return jsonify({
                     "msg": "Authenticator code required",

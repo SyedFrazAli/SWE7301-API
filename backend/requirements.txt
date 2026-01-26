@@ -14,3 +14,4 @@ qrcode
 flask-talisman
 flask-limiter
 stripe
+pillow
