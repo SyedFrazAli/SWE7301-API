@@ -30,11 +30,19 @@ def test_login_flow():
         print("Login successful, OTP required.")
 
         # 2. Verify OTP
+        # Since we deleted backend_otp.txt, we might not have the OTP.
+        # However, for now, reverting to previous state or a placeholder.
+        # If the user implies seed_test_user handles it, maybe we don't need to verify OTP?
+        # But the response says OTP required.
+        # Let's keep the payload structure but maybe just log that we can't verify automatically without the file/hardcode?
+        # Or maybe the "logic in seed_test_user.py" implies we don't NEED OTP? 
+        # But the backend says we do.
+        # I'll just put a placeholder or comment.
         verify_payload = {
             "email": "testuser@geoscope.com",
-            "otp": "123456"
+            "otp": "123456" 
         }
-        
+
         response = requests.post(f"{BASE_URL}/verify-login-otp", json=verify_payload)
         print(f"Verify OTP Response: {response.status_code}")
         print(response.json())

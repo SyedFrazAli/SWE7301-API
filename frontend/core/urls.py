@@ -13,7 +13,7 @@ urlpatterns = [
     path('observations/', views.observations, name='observations'),
     path('satellites/', views.satellites, name='satellites'),
     path('observations/', views.observations, name='observations'),
-    path('analytics/', views.analytics, name='analytics'),
+
     path('subscribe/<int:product_id>/', views.subscribe, name='subscribe'),
     path('verify-2fa-endpoint/', views.verify_2fa_view, name='verify_2fa_endpoint'),
     path('google-login-endpoint/', views.google_login_view, name='google_login_endpoint'),

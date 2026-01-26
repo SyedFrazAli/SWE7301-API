@@ -550,12 +550,3 @@ def payment_failed(request):
     """Render payment failed page"""
     return render(request, "payment_failed.html")
 
-
-def analytics(request):
-    """Analytics view protected by session token"""
-    access_token = request.session.get("access_token")
-    if not access_token:
-        return redirect("login")
-    
-    username = request.session.get("username", "User")
-    return render(request, "analytics.html", {"username": username})

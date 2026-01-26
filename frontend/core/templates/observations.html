@@ -305,9 +305,6 @@
             <a href="{% url 'satellites' %}" class="nav-item ">
                 <span>Satellites</span>
             </a>
-            <a href="#" class="nav-item">
-                <span>Analytics</span>
-            </a>
             <a href="{% url 'settings' %}" class="nav-item ">
                 <span>Settings</span>
             </a>
@@ -318,53 +315,55 @@
     </div>
 
     <main class="main-content">
-    <header class="header">
-        <div class="welcome">
-            <h1>Geospatial Observations</h1>
-            <p>Real-time data insights from your active satellite feeds.</p>
-        </div>
-        <div class="user-profile">
-            <div class="avatar">{{ username|slice:":1"|upper }}</div>
-            <span style="font-size: 14px; font-weight: 600;">{{ username }}</span>
-        </div>
-    </header>
+        <header class="header">
+            <div class="welcome">
+                <h1>Geospatial Observations</h1>
+                <p>Real-time data insights from your active satellite feeds.</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar">{{ username|slice:":1"|upper }}</div>
+                <span style="font-size: 14px; font-weight: 600;">{{ username }}</span>
+            </div>
+        </header>
 
-    <section class="section-card">
-        <div class="section-header">
-            <h3 class="section-title">Latest Data Points</h3>
-        </div>
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="text-align: left; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 12px;">Timestamp</th>
-                    <th style="padding: 12px;">Product</th>
-                    <th style="padding: 12px;">Observation</th>
-                    <th style="padding: 12px;">Confidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for obs in observations %}
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 16px 12px;">{{ obs.timestamp }}</td>
-                    <td style="padding: 16px 12px; font-weight: 600;">{{ obs.product_name }}</td>
-                    <td style="padding: 16px 12px;">
-                        <span style="background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-weight: 700;">
-                            {{ obs.value }} {{ obs.unit }}
-                        </span>
-                    </td>
-                    <td style="padding: 16px 12px;">{{ obs.confidence|floatformat:2 }}%</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        No observations available. Subscribe to a product to start receiving data.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
-</main>
+        <section class="section-card">
+            <div class="section-header">
+                <h3 class="section-title">Latest Data Points</h3>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr
+                        style="text-align: left; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 12px;">Timestamp</th>
+                        <th style="padding: 12px;">Product</th>
+                        <th style="padding: 12px;">Observation</th>
+                        <th style="padding: 12px;">Confidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obs in observations %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 16px 12px;">{{ obs.timestamp }}</td>
+                        <td style="padding: 16px 12px; font-weight: 600;">{{ obs.product_name }}</td>
+                        <td style="padding: 16px 12px;">
+                            <span
+                                style="background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-weight: 700;">
+                                {{ obs.value }} {{ obs.unit }}
+                            </span>
+                        </td>
+                        <td style="padding: 16px 12px;">{{ obs.confidence|floatformat:2 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            No observations available. Subscribe to a product to start receiving data.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
 </body>
 
 </html>
