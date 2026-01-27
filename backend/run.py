@@ -1,4 +1,5 @@
 from flask import Flask, g
+from datetime import datetime, timezone
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
@@ -44,7 +45,7 @@ def get_app():
     limiter = Limiter(
         get_remote_address,
         app=app,
-        default_limits=["200 per day", "50 per hour"],
+        default_limits=["2000 per day", "500 per hour"],  # Increased for API usage tracking
         storage_uri="memory://"
     )
 
@@ -62,21 +63,72 @@ def get_app():
     if db.query(Product).count() == 0:
         products = [
             Product(id=1, name="Crop Health Monitoring", description="High-res spectral analysis for agriculture.", price="$499/mo", stripe_price_id="price_1Stb2o9vslVP6XFWGC7vikxQ"),
-            Product(id=2, name="Wildfire Risk Assessment", description="Real-time thermal imaging and risk modeling.", price="$799/mo", stripe_price_id="price_1Stb5D9vslVP6XFW3gJG6GvE"),
+            Product(id=2, name="Wildfire Risk Assessment", description="Real-time thermal imaging and risk modeling.", price="$399/mo", stripe_price_id="price_1Stb5D9vslVP6XFW3gJG6GvE"),
             Product(id=3, name="Urban Expansion Tracking", description="Monthly change detection for city planning.", price="$299/mo", stripe_price_id="price_1Stb7W9vslVP6XFWkEEmUE4g"),
-            Product(id=4, name="Deforestation Alert System", description="Instant notification of illegal logging activities.", price="$599/mo", stripe_price_id="price_1StbA09vslVP6XFWwcltwqQL"),
+            Product(id=4, name="Deforestation Alert System", description="Instant notification of illegal logging activities.", price="$199/mo", stripe_price_id="price_1StbA09vslVP6XFWwcltwqQL"),
             Product(id=5, name="Pro Plan (All Access)", description="Complete access to all GeoScope intelligence products.", price="$999/mo", stripe_price_id="price_1Stai89vslVP6XFWjMs1acaA")
         ]
         db.add_all(products)
         db.commit()
 
         # Seed Observations
-        observations = [
-            ObservationRecord(product_id=1, satellite_id="SENTINEL-2", notes="Healthy wheat field analysis", coordinates="34.05, -118.24"),
-            ObservationRecord(product_id=2, satellite_id="LANDSAT-8", notes="Thermal anomaly detected in forest", coordinates="45.52, -122.67"),
-            ObservationRecord(product_id=3, satellite_id="SPOT-7", notes="New construction area identified", coordinates="51.50, -0.12"),
-            ObservationRecord(product_id=4, satellite_id="SENTINEL-1", notes="Logging tracks spotted", coordinates="-3.46, -62.21")
-        ]
+        # Bulk Seed Observations (100 per product for products 1-4)
+        observations = []
+        import random
+        from datetime import timedelta
+        
+        # Product 1: Crop Health (NDVI)
+        for i in range(100):
+            observations.append(ObservationRecord(
+                product_id=1,
+                satellite_id=random.choice(["SENTINEL-2", "LANDSAT-8"]),
+                notes=f"Crop health scan batch #{i}",
+                coordinates=f"{30 + random.random()*10}, {-100 - random.random()*10}",
+                value=f"{0.4 + random.random()*0.5:.2f}",
+                unit="NDVI",
+                confidence=85 + random.random()*14,
+                timestamp=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30))
+            ))
+
+        # Product 2: Wildfire Risk (Temperature)
+        for i in range(100):
+            observations.append(ObservationRecord(
+                product_id=2,
+                satellite_id="MODIS",
+                notes=f"Thermal anomaly scan #{i}",
+                coordinates=f"{35 + random.random()*5}, {-120 - random.random()*5}",
+                value=f"{300 + random.randint(0, 50)}",
+                unit="Kelvin",
+                confidence=90 + random.random()*9,
+                timestamp=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30))
+            ))
+
+        # Product 3: Urban Expansion (Area)
+        for i in range(100):
+            observations.append(ObservationRecord(
+                product_id=3,
+                satellite_id="SPOT-7",
+                notes=f"Urban growth detection #{i}",
+                coordinates=f"{51 + random.random()}, {-0.1 - random.random()}",
+                value=f"{random.randint(100, 5000)}",
+                unit="m2",
+                confidence=88 + random.random()*11,
+                timestamp=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30))
+            ))
+
+        # Product 4: Deforestation (Alerts)
+        for i in range(100):
+            observations.append(ObservationRecord(
+                product_id=4,
+                satellite_id="SENTINEL-1",
+                notes=f"Forest cover change #{i}",
+                coordinates=f"{-3 + random.random()}, {-62 - random.random()}",
+                value="Detected" if random.random() > 0.8 else "Clear",
+                unit="Status",
+                confidence=95 + random.random()*4,
+                timestamp=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30))
+            ))
+
         db.add_all(observations)
         
         # Seed Subscriptions
