@@ -6,6 +6,9 @@ sqlalchemy==2.0.45
 gunicorn==23.0.0
 flasgger==0.9.7.1
 pytest==9.0.2
+pytest-mock==3.15.1
+pytest-cov==7.0.0
+faker==40.1.2
 Authlib==1.4.0
 requests==2.32.3
 python-dotenv

@@ -20,11 +20,16 @@ import qrcode
 import io
 import base64
 from app.routes.observation import User, get_db
+from authlib.integrations.flask_client import OAuth
 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+
+# Initialize OAuth globally for testing/patching
+oauth = OAuth()
+google = None
 
 def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
@@ -76,6 +81,19 @@ def register(app):
     Registers authentication routes with JWT token management.
     Includes login, signup, token refresh, and token validation endpoints.
     """
+    global google
+    
+    # Initialize OAuth with app context
+    oauth.init_app(app)
+    
+    # Register Google OAuth
+    google = oauth.register(
+        name='google',
+        client_id=os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id"),
+        client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'},
+    )
 
     @app.route('/signup', methods=['POST'])
     def signup():
@@ -170,7 +188,7 @@ def register(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/verify-signup-otp/', methods=['POST'])
+    @app.route('/verify-signup-otp', methods=['POST'])
     def verify_signup_otp():
         """
         Verifies email OTP during signup flow (without generating tokens).
@@ -203,7 +221,7 @@ def register(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/resend-signup-otp/', methods=['POST'])
+    @app.route('/resend-signup-otp', methods=['POST'])
     def resend_signup_otp():
         """
         Resend OTP email during signup flow.
@@ -300,27 +318,6 @@ def register(app):
     def verify_login_otp():
         """
         Verifies OTP for Login. 
-        ---
-        tags:
-          - Authentication
-        parameters:
-          - in: body
-            name: body
-            schema:
-              type: object
-              required:
-                - email
-                - otp
-              properties:
-                email:
-                  type: string
-                otp:
-                  type: string
-        responses:
-          200:
-            description: Login successful, returns tokens
-          401:
-            description: Invalid OTP
         """
         try:
             db = get_db()
@@ -559,19 +556,6 @@ def register(app):
             
         except Exception as e:
             return jsonify({'error': str(e)}), 500
-
-    # OAuth Setup
-    from authlib.integrations.flask_client import OAuth
-    import os
-
-    oauth = OAuth(app)
-    google = oauth.register(
-        name='google',
-        client_id=os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id"),
-        client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={'scope': 'openid email profile'},
-    )
 
     @app.route('/google-login', methods=['GET', 'POST'])
     def google_login():
