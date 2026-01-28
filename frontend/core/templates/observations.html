@@ -9,6 +9,59 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
+
+    /* Tabs */
+    .tabs-nav {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 2px;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 24px;
+        font-family: "Outfit", sans-serif;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text-muted);
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-main);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--primary);
+        border-radius: 3px 3px 0 0;
+    }
+
+    .tab-pane {
+        display: none;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
 </style>
 {% endblock %}
 
@@ -27,43 +80,227 @@
     </div>
 </header>
 
+<section class="section-card" style="margin-bottom: 24px;">
+    <div class="section-header">
+        <h3 class="section-title">API Consumption (Real-time)</h3>
+        <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 12px;">
+            <span>Auto-updates every 2s</span>
+            <a href="{{ BACKEND_URL }}/apidocs" target="_blank"
+                style="padding: 6px 12px; font-size: 12px; border-radius: 6px; border: 1px solid var(--primary); background: transparent; color: var(--primary); font-weight: 600; text-decoration: none;">
+                Open Swagger API Docs
+            </a>
+            <button id="simBtn" onclick="toggleSimulation()"
+                style="padding: 6px 12px; font-size: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; min-width: 120px;">
+                Start Simulation
+            </button>
+            <span style="font-size: 11px; color: var(--text-muted);">(Execute calls here to generate traffic)</span>
+        </div>
+    </div>
+    <div class="chart-container" style="position: relative; height: 250px; width: 100%">
+        <canvas id="apiUsageChart"></canvas>
+    </div>
+</section>
+
 <section class="section-card">
     <div class="section-header">
         <h3 class="section-title">Latest Data Points</h3>
     </div>
-    <div class="table-responsive">
-        <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
-            <thead>
-                <tr
-                    style="text-align: left; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 12px;">Timestamp</th>
-                    <th style="padding: 12px;">Product</th>
-                    <th style="padding: 12px;">Observation</th>
-                    <th style="padding: 12px;">Confidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for obs in observations %}
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 16px 12px;">{{ obs.timestamp }}</td>
-                    <td style="padding: 16px 12px; font-weight: 600;">{{ obs.product_name }}</td>
-                    <td style="padding: 16px 12px;">
-                        <span
-                            style="background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-weight: 700;">
-                            {{ obs.value }} {{ obs.unit }}
-                        </span>
-                    </td>
-                    <td style="padding: 16px 12px;">{{ obs.confidence|floatformat:2 }}%</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        No observations available. Subscribe to a product to start receiving data.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+        {% for tab in tabs %}
+        <button class="tab-btn {% if forloop.first %}active{% endif %}" onclick="switchTab(event, 'tab-{{ tab.id }}')">
+            {{ tab.name }}
+        </button>
+        {% empty %}
+        <div style="padding: 12px; color: var(--text-muted);">No active subscriptions found.</div>
+        {% endfor %}
     </div>
+
+    <!-- Tabs Content -->
+    {% for tab in tabs %}
+    <div id="tab-{{ tab.id }}" class="tab-pane {% if forloop.first %}active{% endif %}">
+        <div class="table-responsive">
+            <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                <thead>
+                    <tr
+                        style="text-align: left; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 12px;">Timestamp</th>
+                        <th style="padding: 12px;">Product</th>
+                        <th style="padding: 12px;">Observation</th>
+                        <th style="padding: 12px;">Confidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obs in tab.observations %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 16px 12px;">{{ obs.timestamp }}</td>
+                        <td style="padding: 16px 12px; font-weight: 600;">{{ obs.product_name }}</td>
+                        <td style="padding: 16px 12px;">
+                            <span
+                                style="background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-weight: 700;">
+                                {{ obs.value }} {{ obs.unit }}
+                            </span>
+                        </td>
+                        <td style="padding: 16px 12px;">{{ obs.confidence|floatformat:2 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% empty %}
+    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        No observations available. Subscribe to a product to start receiving data.
+    </div>
+    {% endfor %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    {
+        const backendUrl = "{{ BACKEND_URL }}";
+        const ctx = document.getElementById("apiUsageChart").getContext("2d");
+
+        // Gradient for chart
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, "rgba(37, 99, 235, 0.2)");
+        gradient.addColorStop(1, "rgba(37, 99, 235, 0)");
+
+        const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: "API Calls (Last Hour)",
+                        data: [],
+                        fill: true,
+                        borderColor: "#2563eb",
+                        backgroundColor: gradient,
+                        tension: 0.4,
+                        pointBackgroundColor: "#ffffff",
+                        pointBorderColor: "#2563eb",
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: "#1e293b",
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { family: "Outfit", size: 14 },
+                        bodyFont: { family: "Outfit", size: 13 },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: "Outfit" } },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [4, 4], color: "#e2e8f0" },
+                        ticks: { font: { family: "Outfit" }, precision: 0 },
+                    },
+                },
+                interaction: {
+                    mode: "index",
+                    intersect: false,
+                },
+            },
+        });
+
+        let simInterval = null;
+        const simBtn = document.getElementById("simBtn");
+
+        window.toggleSimulation = function () {
+            if (simInterval) {
+                // STOP Logic
+                clearInterval(simInterval);
+                simInterval = null;
+                simBtn.innerText = "Start Simulation";
+                simBtn.style.background = "transparent";
+                simBtn.style.color = "var(--accent)";
+                simBtn.style.border = "1px solid var(--accent)";
+            } else {
+                // START Logic
+                simBtn.innerText = "Stop Simulation";
+                simBtn.style.background = "var(--accent)";
+                simBtn.style.color = "#fff";
+                simBtn.style.border = "1px solid var(--accent)";
+
+                // Immediately run once, then interval
+                runSimStep();
+                simInterval = setInterval(runSimStep, 1000); // 1-second interval
+            }
+        };
+
+        async function runSimStep() {
+            try {
+                // Generate 5 calls
+                await fetch(`${backendUrl}/api/simulate-traffic`, { method: 'POST' });
+                // Chart will update automatically via its own separate poll
+            } catch (e) {
+                console.error("Sim error", e);
+            }
+        }
+
+        async function fetchUsageData() {
+            try {
+                const response = await fetch(`${backendUrl}/api/usage-stats`);
+                const data = await response.json();
+
+                chart.data.labels = data.labels;
+                chart.data.datasets[0].data = data.data;
+                chart.update();
+            } catch (error) {
+                console.error('Error fetching usage stats:', error);
+            }
+        }
+
+        // Initial fetch
+        fetchUsageData();
+
+        // Poll every 2 seconds
+        setInterval(fetchUsageData, 2000);
+    }
+
+    // Tab Switching Logic
+    function switchTab(event, tabId) {
+        // Hide all tab panes
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+
+        // Deactivate all buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Show target pane
+        document.getElementById(tabId).classList.add('active');
+
+        // Activate clicked button
+        event.currentTarget.classList.add('active');
+    }
+
+    // Real Data Polling Logic REMOVED in favor of Swagger Manual Execution
+
+    // Chart auto-refresh poll (just for the chart data itself, not generating traffic)
+    // We already have this via `setInterval(fetchUsageData, 2000);` above.
+</script>
 {% endblock %}

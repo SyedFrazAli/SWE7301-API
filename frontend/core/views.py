@@ -285,6 +285,41 @@ def verify_email_view(request):
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
+def verify_signup_otp_view(request):
+    """Handle signup email OTP verification (no session creation)"""
+    if request.method == "POST":
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            response = requests.post(f"{BACKEND_URL}/verify-signup-otp/", json=data, timeout=REQUEST_TIMEOUT)
+            
+            if response.status_code == 200:
+                return JsonResponse(response.json())
+            else:
+                return JsonResponse(response.json(), status=response.status_code)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+def resend_signup_otp_view(request):
+    """Handle resending signup OTP email"""
+    if request.method == "POST":
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            response = requests.post(f"{BACKEND_URL}/resend-signup-otp/", json=data, timeout=REQUEST_TIMEOUT)
+            
+            if response.status_code == 200:
+                return JsonResponse(response.json())
+            else:
+                return JsonResponse(response.json(), status=response.status_code)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
 
 def observations(request):
     """Observations view protected by session token"""
@@ -310,10 +345,33 @@ def observations(request):
         print(f"Error fetching observations: {e}")
         plan_name = "Free Plan"
 
+    # Group observations by product for tabs
+    tabs = []
+    if observations_data:
+        grouped = {}
+        for obs in observations_data:
+            p_id = obs.get("product_id")
+            # Clean up product name (remove "Product #" prefix if it exists from backend or just use valid name)
+            # The backend currently sends "Product #1" or "Crop Health Monitoring" if lookup works.
+            # Ideally backend sends clean name. Let's trust backend or clean it? 
+            # obs['product_name'] comes from backend.
+            
+            if p_id not in grouped:
+                grouped[p_id] = {
+                    "id": p_id,
+                    "name": obs.get("product_name"), 
+                    "observations": []
+                }
+            grouped[p_id]["observations"].append(obs)
+        
+        # Sort by ID
+        tabs = sorted(grouped.values(), key=lambda x: x['id'])
+
     return render(request, "observations.html", {
         "username": username,
         "plan_name": plan_name,
-        "observations": observations_data
+        "tabs": tabs,
+        "BACKEND_URL": BACKEND_URL
     })
 
 def satellites(request):
@@ -383,7 +441,8 @@ def dashboard(request):
         "plan_name": plan_name,
         "products": products,
         "subscriptions": subscriptions,
-        "backend_connected": prod_res.status_code == 200 if 'prod_res' in locals() else False
+        "backend_connected": prod_res.status_code == 200 if 'prod_res' in locals() else False,
+        "BACKEND_URL": BACKEND_URL
     })
 
 
@@ -479,6 +538,38 @@ def subscribe(request, product_id):
         print(f"Error subscribing: {e}")
     
     return redirect("dashboard")
+
+
+def cancel_subscription(request, product_id):
+    """Handle product subscription cancellation"""
+    access_token = request.session.get("access_token")
+    if not access_token:
+        return redirect("login")
+    
+    user_email = request.session.get("username")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    try:
+        # Call backend DELETE endpoint
+        # Backend expects JSON body with user_id and product_id
+        response = requests.delete(
+            f"{BACKEND_URL}/api/subscriptions", 
+            json={"user_id": user_email, "product_id": product_id}, 
+            headers=headers, 
+            timeout=REQUEST_TIMEOUT
+        )
+        
+        if response.status_code == 200:
+            print(f"Subscription for product {product_id} cancelled successfully")
+        else:
+            print(f"Error cancelling subscription: {response.text}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error cancelling (request error): {e}")
+    except Exception as e:
+        print(f"Error cancelling: {e}")
+    
+    return redirect("subscriptions")
 
 
 def update_token_view(request):

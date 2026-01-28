@@ -1,6 +1,8 @@
 from flask import request, jsonify, g
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Integer, Text
+from datetime import datetime, timezone, timedelta
+import random
+from sqlalchemy import Column, String, DateTime, Integer, Text, func, Float
+
 from app.db import Base
 
 class Product(Base):
@@ -48,8 +50,22 @@ class ObservationRecord(Base):
     spectral_indices = Column(String(500))
     notes = Column(Text)
     product_id = Column(Integer, nullable=True)
+    value = Column(String(50), nullable=True) # e.g. "0.85"
+    unit = Column(String(20), nullable=True)  # e.g. "NDVI"
+    confidence = Column(Float, nullable=True) # e.g. 98.5
 
     def to_dict(self):
+        # Fetch product name if possible (this is a simple hack since we don't have a relationship defined properly here yet for simplicity)
+        # In a real app, use SQLAlchemy relationships.
+        product_name = f"Product #{self.product_id}"
+        if self.product_id:
+            from app.db import SessionLocal
+            db = SessionLocal()
+            prod = db.get(Product, self.product_id)
+            if prod:
+                product_name = prod.name
+            db.close()
+
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
@@ -59,6 +75,24 @@ class ObservationRecord(Base):
             "spectral_indices": self.spectral_indices,
             "notes": self.notes,
             "product_id": self.product_id,
+            "product_name": product_name,
+            "value": self.value,
+            "unit": self.unit,
+            "confidence": self.confidence
+        }
+
+class ApiUsage(Base):
+    __tablename__ = "api_usage"
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    endpoint = Column(String(100))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "endpoint": self.endpoint
         }
 
 class User(Base):
@@ -91,9 +125,51 @@ def get_db():
     """Helper to get the current request's DB session"""
     return g.db
 
+def log_usage(endpoint_name):
+    """Helper to log API usage"""
+    try:
+        db = get_db()
+        new_usage = ApiUsage(endpoint=endpoint_name)
+        db.add(new_usage)
+        db.commit()
+    except Exception as e:
+        print(f"Error logging usage: {e}")
+
 def register(app):
     @app.route("/api/observations", methods=["POST"])
     def create_obs():
+        """
+        Create a new observation.
+        ---
+        tags:
+          - Observations
+        security:
+          - Bearer: []
+        parameters:
+          - in: body
+            name: body
+            schema:
+              type: object
+              required:
+                - product_id
+                - value
+              properties:
+                product_id:
+                  type: integer
+                  description: ID of the product
+                value:
+                  type: number
+                  description: Observation value
+                lat:
+                  type: number
+                lon:
+                  type: number
+        responses:
+          201:
+            description: Observation created
+          400:
+            description: Invalid input
+        """
         db = get_db()
         data = request.get_json() or {}
 
@@ -103,11 +179,74 @@ def register(app):
                 data["timestamp"].replace("Z", "+00:00")
             )
 
-        new_obs = ObservationRecord(**data)
+        # Filter data to only include valid model fields
+        valid_fields = ["product_id", "value", "timestamp", "confidence"]
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+
+        new_obs = ObservationRecord(**filtered_data)
         db.add(new_obs)
         db.commit()
         db.refresh(new_obs)  # ensure ORM maps back the ID
+        
+        # Log usage
+        log_usage("POST /api/observations")
+        
         return jsonify({"id": new_obs.id}), 201
+
+    @app.route("/api/observations", methods=["GET"])
+    @jwt_required()
+    def list_obs():
+        """
+        List all observations.
+        ---
+        tags:
+          - Observations
+        security:
+          - Bearer: []
+        responses:
+          200:
+            description: List of observations
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  product_id:
+                    type: integer
+                  value:
+                    type: number
+                  timestamp:
+                    type: string
+        """
+        current_user = get_jwt_identity()
+        db = get_db()
+        
+        # Access Control: Filter by subscription
+        # 1. Get user's subscriptions
+        subs = db.query(Subscription).filter(Subscription.user_id == current_user).all()
+        subscribed_product_ids = [s.product_id for s in subs]
+        
+        # 2. Check for Pro Plan (ID 5)
+        is_pro = 5 in subscribed_product_ids
+        
+        query = db.query(ObservationRecord)
+        
+        if not is_pro:
+            if not subscribed_product_ids:
+                # No subscriptions (Free Plan) -> No access
+                return jsonify([]), 200
+            else:
+                # Filter strictly to subscribed products
+                query = query.filter(ObservationRecord.product_id.in_(subscribed_product_ids))
+        
+        observations = query.order_by(ObservationRecord.timestamp.desc()).all()
+        
+        # Log usage
+        log_usage("GET /api/observations")
+        
+        return jsonify([o.to_dict() for o in observations])
 
     @app.route("/api/observations/<int:obs_id>", methods=["GET"])
     @jwt_required()
@@ -126,6 +265,17 @@ def register(app):
             ).first()
             if not sub:
                 return jsonify({"error": "Forbidden: Subscription required"}), 403
+
+        if obs.product_id:
+            sub = db.query(Subscription).filter(
+                Subscription.user_id == current_user,
+                (Subscription.product_id == obs.product_id) | (Subscription.product_id == 5)
+            ).first()
+            if not sub:
+                return jsonify({"error": "Forbidden: Subscription required"}), 403
+
+        # Log usage
+        log_usage("GET /api/observations/:id")
 
         return jsonify(obs.to_dict())
 
@@ -146,6 +296,10 @@ def register(app):
                 setattr(obs, key, value)
 
         db.commit()
+        
+        # Log usage
+        log_usage("PUT /api/observations/:id")
+        
         return jsonify({"message": "Updated"}), 200
 
     @app.route("/api/observations/<int:obs_id>", methods=["DELETE"])
@@ -171,7 +325,48 @@ def register(app):
         
         db.delete(obs)
         db.commit()
+        
+        # Log usage
+        log_usage("DELETE /api/observations/:id")
+        
         return jsonify({"message": "Deleted"}), 200
+
+    @app.route("/api/usage-stats", methods=["GET"])
+    def get_usage_stats():
+        """
+        Get API usage statistics
+        """
+        db = get_db()
+        
+        # Get usage for the last hour, grouped by minute
+        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        
+        # SQLite-specific date truncation for grouping by minute
+        # For SQLite: strftime('%Y-%m-%d %H:%M:00', timestamp)
+        usage_data = db.query(
+            func.strftime('%H:%M', ApiUsage.timestamp).label('time_bucket'),
+            func.count(ApiUsage.id).label('count')
+        ).filter(
+            ApiUsage.timestamp >= one_hour_ago
+        ).group_by(
+            'time_bucket'
+        ).order_by(
+            'time_bucket'
+        ).all()
+        
+        # Format for chart
+        labels = []
+        data = []
+        
+        for row in usage_data:
+            labels.append(row.time_bucket)
+            data.append(row.count)
+            
+        return jsonify({
+            "labels": labels,
+            "data": data,
+            "total_calls_last_hour": sum(data)
+        })
 
     @app.route("/api/products", methods=["GET"])
     def get_products():
@@ -223,3 +418,62 @@ def register(app):
         db.commit()
         db.refresh(new_sub)
         return jsonify(new_sub.to_dict()), 201
+
+    @app.route("/api/subscriptions", methods=["DELETE"])
+    def delete_subscription():
+        db = get_db()
+        # Expecting JSON body with user_id and product_id
+        # In a real app with JWT, we should trust the token's user_id, 
+        # but for this logic we'll require user_id in body match the requestor or admin logic.
+        # For simplicity consistent with creation/listing:
+        
+        data = request.get_json() or {}
+        user_id = data.get("user_id")
+        product_id = data.get("product_id")
+        
+        if not user_id or not product_id:
+            return jsonify({"error": "Missing user_id or product_id"}), 400
+            
+        # Find subscription
+        sub = db.query(Subscription).filter(
+            Subscription.user_id == user_id, 
+            Subscription.product_id == int(product_id)
+        ).first()
+        
+        if not sub:
+            return jsonify({"error": "Subscription not found"}), 404
+            
+        db.delete(sub)
+        db.commit()
+        
+        return jsonify({"message": "Subscription cancelled"}), 200
+    
+    @app.route("/api/simulate-traffic", methods=["POST"])
+    def simulate_traffic():
+        """
+        Simulate traffic by logging multiple API usage entries AND creating dummy observations.
+        """
+        try:
+            db = get_db()
+            # Generate 5 logs per call (for continuous simulation) for chart
+            for _ in range(5):
+                # 1. Log Usage (Fixing Chart)
+                # Ensure we use the exact same timestamp logic as the query
+                log_usage("GET /api/observations")
+            
+            # 2. Create Dummy Observation (Fixing Tabs / Product #0)
+            # Create 1 realistic observation per tick so tabs populate
+            product_id = random.randint(1, 4) # Valid products only
+            new_obs = ObservationRecord(
+                product_id=product_id,
+                value=str(round(random.uniform(0.1, 0.9), 2)),
+                unit="Index",
+                confidence=round(random.uniform(80.0, 99.9), 1),
+                notes="Simulated Data"
+            )
+            db.add(new_obs)
+            db.commit()
+
+            return jsonify({"message": "Traffic simulated successfully", "count": 5}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500

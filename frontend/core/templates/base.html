@@ -489,10 +489,6 @@
                 class="nav-item {% if request.resolver_match.url_name == 'observations' %}active{% endif %}">
                 <span>Observations</span>
             </a>
-            <a href="{% url 'satellites' %}"
-                class="nav-item {% if request.resolver_match.url_name == 'satellites' %}active{% endif %}">
-                <span>Satellites</span>
-            </a>
             <a href="{% url 'settings' %}"
                 class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                 <span>Settings</span>

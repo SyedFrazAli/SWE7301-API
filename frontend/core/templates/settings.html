@@ -4,142 +4,436 @@
 {% block title %}Settings - GeoScope{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'signup.css' %}" />
 <style>
-    .settings-card {
-        padding: 40px;
-        max-width: 600px;
-        margin: 0 auto;
+    /* Match login/signup theme */
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        background: var(--surface);
+        padding: 48px;
+        border-radius: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 680px;
+    }
+
+    .logo-circle {
+        width: 64px;
+        height: 64px;
+        background: #eff6ff;
+        border-radius: 50%<br/> display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+    }
+
+    .auth-title {
+        font-size: 28px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 12px;
+        color: var(--text-main);
+    }
+
+    .auth-subtitle {
+        text-align: center;
+        color: var(--text-muted);
+        margin-bottom: 40px;
+        font-size: 15px;
+    }
+
+    .section-divider {
+        border: 0;
+        border-top: 1px solid var(--border);
+        margin: 40px 0;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: var(--text-main);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text-main);
+        font-size: 14px;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: 16px;
+        font-family: inherit;
+        background: var(--background);
+        color: var(--text-main);
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    input:disabled {
+        background: #f1f5f9;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .btn-auth {
+        padding: 14px 24px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-auth:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-danger {
+        background: #ef4444;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+
+    .status-msg {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .status-success {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-error {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* 2FA Card */
+    .twofa-card {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .twofa-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .twofa-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 4px;
     }
 
     .status-badge {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 4px;
-        margin-left: 10px;
-        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
     }
 
     .status-enabled {
-        background-color: #d4edda;
-        color: #155724;
+        background: #dcfce7;
+        color: #166534;
     }
 
     .status-disabled {
-        background-color: #f8d7da;
-        color: #721c24;
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .twofa-description {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 16px;
+    }
+
+    .instruction-list {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .instruction-list h4 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-main);
+    }
+
+    .instruction-list ol {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.8;
+    }
+
+    .instruction-list li {
+        margin-bottom: 6px;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 2000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open {
+        opacity: 1;
+        visibility: visible;
     }
 
     .modal {
-        display: none;
-        position: fixed;
-        z-index: 2000;
-        /* Higher than sidebar */
-        left: 0;
-        top: 0;
+        background: white;
+        padding: 32px;
+        border-radius: 24px;
         width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.4);
-        padding-top: 60px;
-    }
-
-    .modal-content {
-        background-color: #fefefe;
-        margin: 5% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
         max-width: 500px;
-        border-radius: 8px;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
-    .close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
+    .modal-overlay.open .modal {
+        transform: translateY(0);
     }
 
-    .close:hover,
-    .close:focus {
-        color: black;
-        text-decoration: none;
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .modal-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 24px;
         cursor: pointer;
+        color: var(--text-muted);
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-modal:hover {
+        color: var(--text-main);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="signup-page" style="height: auto; min-height: unset; background: transparent;">
-    <div class="signup-container">
-        <div class="signup-card settings-card" style="margin: 0;">
-            <h1 class="title">Settings</h1>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="logo-circle">
+            <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Logo" style="width: 40px; height: 40px;">
+        </div>
 
-            <!-- Profile Section -->
-            <div class="setting-item" style="margin-top: 30px; margin-bottom: 40px;">
-                <h3>Profile Information</h3>
-                <form id="profile-form">
-                    <div class="field">
-                        <label>First Name</label>
-                        <input type="text" id="first_name" name="first_name" value="{{ user_info.first_name }}"
-                            class="field" style="width: 100%; padding: 8px;">
-                    </div>
-                    <div class="field" style="margin-top: 10px;">
-                        <label>Last Name</label>
-                        <input type="text" id="last_name" name="last_name" value="{{ user_info.last_name }}"
-                            class="field" style="width: 100%; padding: 8px;">
-                    </div>
-                    <div class="field" style="margin-top: 10px;">
-                        <label>Email</label>
-                        <input type="email" id="email" name="email" value="{{ user_info.email }}" class="field"
-                            style="width: 100%; padding: 8px;" disabled title="Email updates coming soon">
-                    </div>
-                    <button type="submit" class="btn-signup" style="margin-top: 15px;">Save Changes</button>
-                    <div id="profile-msg" style="margin-top: 10px; font-weight: bold;"></div>
-                </form>
+        <h1 class="auth-title">Settings</h1>
+        <p class="auth-subtitle">Manage your account preferences and security</p>
+
+        <!-- Profile Section -->
+        <h2 class="section-title">Profile Information</h2>
+        <form id="profile-form">
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ user_info.first_name }}" required>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ user_info.last_name }}" required>
+            </div>
 
-            <h1 class="title" style="font-size: 24px;">Security</h1>
-            <div class="setting-item" style="margin-top: 20px;">
-                <h3>Authenticator App 2FA
-                    {% if user_info.is_2fa_enabled %}
-                    <span class="status-badge status-enabled">Enabled</span>
-                    {% else %}
-                    <span class="status-badge status-disabled">Disabled</span>
-                    {% endif %}
-                </h3>
-                <p>Use verification codes from an authenticator app (like Google Authenticator) for extra security.
-                </p>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" value="{{ user_info.email }}" disabled>
+            </div>
 
+            <button type="submit" class="btn-auth">Save Changes</button>
+            <div id="profile-msg" class="status-msg" style="display: none;"></div>
+        </form>
+
+        <hr class="section-divider">
+
+        <!-- Security Section -->
+        <h2 class="section-title">Security</h2>
+
+        <div class="twofa-card">
+            <div class="twofa-header">
+                <div>
+                    <div class="twofa-title">Two-Factor Authentication (2FA)</div>
+                </div>
                 {% if user_info.is_2fa_enabled %}
-                <button id="btn-disable-2fa" class="btn-signup"
-                    style="background-color: var(--danger); margin-top: 20px;">Disable 2FA</button>
+                <span class="status-badge status-enabled">
+                    <span class="status-dot" style="background: #22c55e;"></span>
+                    Enabled
+                </span>
                 {% else %}
-                <button id="btn-enable-2fa" class="btn-signup" style="margin-top: 20px;">Enable 2FA</button>
+                <span class="status-badge status-disabled">
+                    <span class="status-dot" style="background: #9ca3af;"></span>
+                    Disabled
+                </span>
                 {% endif %}
             </div>
+
+            <p class="twofa-description">
+                Add an extra layer of security to your account by requiring a verification code from an authenticator
+                app when you sign in.
+            </p>
+
+            {% if not user_info.is_2fa_enabled %}
+            <div class="instruction-list">
+                <h4>📱 How to enable 2FA:</h4>
+                <ol>
+                    <li>Download an authenticator app (Google Authenticator, Authy, Microsoft Authenticator)</li>
+                    <li>Click "Enable 2FA" below</li>
+                    <li>Scan the QR code with your authenticator app</li>
+                    <li>Enter the 6-digit code to verify</li>
+                </ol>
+            </div>
+            {% endif %}
+
+            {% if user_info.is_2fa_enabled %}
+            <button id="btn-disable-2fa" class="btn-auth btn-danger">Disable 2FA</button>
+            {% else %}
+            <button id="btn-enable-2fa" class="btn-auth">Enable 2FA</button>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Enable 2FA Modal -->
-<div id="enableModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 class="title">Setup Authenticator App</h2>
-        <div id="qr-loading">Loading...</div>
+<div class="modal-overlay" id="enableModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Setup Authenticator App</h3>
+            <button class="close-modal" onclick="closeEnableModal()">×</button>
+        </div>
+        <div id="qr-loading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            Loading QR code...
+        </div>
         <div id="qr-content" style="display:none; text-align: center;">
-            <p>Scan this QR code with your authenticator app:</p>
-            <img id="qr-image" src="" alt="QR Code" style="max-width: 200px; margin: 20px 0;" />
-            <p>Then enter the 6-digit code below:</p>
-            <input type="text" id="setup-otp" class="field"
-                style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px;"
-                placeholder="123456" />
-            <button id="btn-verify-enable" class="btn-signup" style="width: 100%;">Verify & Enable</button>
-            <div id="setup-error" class="error" style="margin-top: 10px;"></div>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Scan this QR code with your authenticator app:</p>
+            <img id="qr-image" src="" alt="QR Code"
+                style="max-width: 220px; margin: 20px auto; border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: white;" />
+
+            <div class="form-group" style="text-align: left; margin-top: 24px;">
+                <label for="setup-otp">Enter 6-digit code from your app</label>
+                <input type="text" id="setup-otp" maxlength="6"
+                    style="text-align: center; letter-spacing: 8px; font-size: 24px; font-weight: 600;"
+                    placeholder="000000" />
+            </div>
+
+            <button id="btn-verify-enable" class="btn-auth" style="width: 100%; margin-top: 16px;">
+                Verify & Enable
+            </button>
+            <div id="setup-error" class="status-msg status-error" style="display: none; margin-top: 12px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Disable 2FA Confirmation Modal -->
+<div class="modal-overlay" id="disableModal">
+    <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Disable 2FA</h3>
+            <button class="close-modal" onclick="closeDisableModal()">×</button>
+        </div>
+        <div>
+            <p style="color: var(--text-main); line-height: 1.6; font-size: 16px; margin-bottom: 16px;">
+                Are you sure you want to disable two-factor authentication?
+            </p>
+            <div
+                style="background: #fef2f2; padding: 16px; border-radius: 12px; border: 1px solid #fee2e2; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 14px; color: #991b1b;">
+                    ⚠️ This will make your account less secure. You'll only need your password to sign in.
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end">
+            <button onclick="closeDisableModal()" class="btn-auth"
+                style="background: #e2e8f0; color: var(--text-main);">
+                Cancel
+            </button>
+            <button onclick="confirmDisable2FA()" class="btn-auth btn-danger">
+                Yes, Disable 2FA
+            </button>
         </div>
     </div>
 </div>
@@ -150,8 +444,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         const btnEnable = document.getElementById('btn-enable-2fa');
         const btnDisable = document.getElementById('btn-disable-2fa');
-        const modal = document.getElementById('enableModal');
-        const closeSpan = document.getElementsByClassName("close")[0];
+        const enableModal = document.getElementById('enableModal');
+        const disableModal = document.getElementById('disableModal');
 
         // Profile Update
         const profileForm = document.getElementById('profile-form');
@@ -162,6 +456,8 @@
                 const lastName = document.getElementById('last_name').value;
                 const msgDiv = document.getElementById('profile-msg');
 
+                msgDiv.style.display = 'block';
+                msgDiv.className = 'status-msg';
                 msgDiv.innerText = "Saving...";
                 msgDiv.style.color = "#666";
 
@@ -180,63 +476,78 @@
 
                     const data = await response.json();
                     if (data.success) {
-                        msgDiv.innerText = "Profile updated successfully!";
-                        msgDiv.style.color = "green";
-                        setTimeout(() => { msgDiv.innerText = ""; }, 3000);
+                        msgDiv.className = 'status-msg status-success';
+                        msgDiv.innerText = "✓ Profile updated successfully!";
+                        setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
                     } else {
+                        msgDiv.className = 'status-msg status-error';
                         msgDiv.innerText = data.error || "Update failed";
-                        msgDiv.style.color = "red";
                     }
                 } catch (e) {
+                    msgDiv.className = 'status-msg status-error';
                     msgDiv.innerText = "Network error";
-                    msgDiv.style.color = "red";
                 }
             });
         }
 
-        // disable
-        if (btnDisable) {
-            btnDisable.addEventListener('click', async () => {
-                if (!confirm("Are you sure you want to disable 2FA?")) return;
-
-                try {
-                    const response = await fetch('/disable-2fa/', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        }
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert(data.msg || "Error disabling 2FA");
-                    }
-                } catch (e) {
-                    alert("Network error");
-                }
-            });
-        }
-
-        // enable
+        // Enable 2FA
         if (btnEnable) {
             btnEnable.addEventListener('click', () => {
-                modal.style.display = "block";
+                enableModal.classList.add('open');
                 fetchQR();
             });
         }
 
-        if (closeSpan) {
-            closeSpan.onclick = function () {
-                modal.style.display = "none";
-            }
-        }
-        window.onclick = function (event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
+        // Disable 2FA - Open confirmation modal
+        if (btnDisable) {
+            btnDisable.addEventListener('click', () => {
+                disableModal.classList.add('open');
+            });
         }
 
+        // Close modals
+        window.closeEnableModal = function () {
+            enableModal.classList.remove('open');
+        };
+
+        window.closeDisableModal = function () {
+            disableModal.classList.remove('open');
+        };
+
+        // Confirm disable 2FA
+        window.confirmDisable2FA = async function () {
+            try {
+                const response = await fetch('/disable-2fa/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert(data.msg || "Error disabling 2FA");
+                }
+            } catch (e) {
+                alert("Network error");
+            }
+        };
+
+        // Close on outside click
+        enableModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeEnableModal();
+            }
+        });
+
+        disableModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDisableModal();
+            }
+        });
+
+        // Fetch QR code
         async function fetchQR() {
             const response = await fetch('/setup-2fa-endpoint/');
             const data = await response.json();
@@ -247,11 +558,18 @@
             }
         }
 
+        // Verify and enable 2FA
         const btnVerifyEnable = document.getElementById('btn-verify-enable');
         if (btnVerifyEnable) {
             btnVerifyEnable.addEventListener('click', async () => {
                 const otp = document.getElementById('setup-otp').value;
                 const errorDiv = document.getElementById('setup-error');
+
+                if (otp.length !== 6) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = "Please enter a 6-digit code";
+                    return;
+                }
 
                 try {
                     const response = await fetch('/verify-2fa-setup/', {
@@ -267,10 +585,12 @@
                     if (data.success) {
                         window.location.reload();
                     } else {
-                        errorDiv.textContent = data.msg || data.error || "Invalid code";
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = data.msg || data.error || "Invalid code. Please try again.";
                     }
                 } catch (e) {
-                    errorDiv.textContent = "Network error";
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = "Network error. Please try again.";
                 }
             });
         }

@@ -95,10 +95,11 @@
                     document.addEventListener('DOMContentLoaded', async () => {
                         const urlParams = new URLSearchParams(window.location.search);
                         const sessionId = urlParams.get('session_id');
+                        const backendUrl = "{{ BACKEND_URL }}" || "http://127.0.0.1:5000"; // Fallback for safety
 
                         if (sessionId) {
                             try {
-                                const response = await fetch(`{{ BACKEND_URL }}/api/payment/verify-session?session_id=${sessionId}`);
+                                const response = await fetch(`${backendUrl}/api/payment/verify-session?session_id=${sessionId}`);
                                 const data = await response.json();
 
                                 if (data.status === 'verified') {

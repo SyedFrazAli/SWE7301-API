@@ -62,94 +62,40 @@
 </div>
 
 <div class="grid-layout">
-    <section class="section-card">
+    <section class="section-card" style="grid-column: 1 / -1;">
         <div class="section-header">
-            <h3 class="section-title">Vegetation Index (NDVI)</h3>
-            <select
-                style="padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit;">
-                <option>Last 6 Months</option>
-                <option>Last Year</option>
-            </select>
-        </div>
-        <div class="chart-container" style="position: relative; height: 300px; width: 100%">
-            <canvas id="insightsChart"></canvas>
-        </div>
-    </section>
-
-    <section class="section-card">
-        <div class="section-header">
-            <h3 class="section-title">My Subscriptions</h3>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 300px; overflow-y: auto;">
-            {% for sub in subscriptions %}
-            <div
-                style="padding: 16px; background: #f8fafc; border-radius: 12px; border: 1px solid #dae1e7; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px">
-                        Product #{{ sub.product_id }}
-                    </div>
-                    <div
-                        style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                        <span style="width: 6px; height: 6px; background: var(--accent); border-radius: 50%;"></span>
-                        {{ sub.status|title }}
-                    </div>
-                </div>
+            <h3 class="section-title">API Consumption (Real-time)</h3>
+            <div style="font-size: 13px; color: var(--text-muted);">
+                Auto-updates every 2s
             </div>
-            {% empty %}
-            <div style="text-align: center; padding: 32px 0; color: var(--text-muted);">
-                <p style="margin: 0;">No active subscriptions</p>
-                <p style="font-size: 13px;">Browse products below</p>
-            </div>
-            {% endfor %}
+        </div>
+        <div class="chart-container" style="position: relative; height: 350px; width: 100%">
+            <canvas id="apiUsageChart"></canvas>
         </div>
     </section>
 </div>
 
-<section>
-    <h3 class="section-title" style="margin-bottom: 24px; font-size: 24px">Available Intelligence Products</h3>
-    <div class="product-grid">
-        {% for product in products %}
-        <div class="product-card">
-            <div style="flex: 1">
-                <div
-                    style="color: var(--primary); font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">
-                    Premium Data
-                </div>
-                <h4 style="margin: 0 0 8px 0; font-size: 20px">{{ product.name }}</h4>
-                <p style="margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.5;">{{
-                    product.description }}</p>
-            </div>
-            <div style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
-                    <span style="font-size: 13px; color: var(--text-muted)">Starting at</span>
-                    <span class="product-price">{{ product.price }}</span>
-                </div>
-                <a href="{% url 'subscribe' product.id %}" class="btn-subscribe">Subscribe Now</a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
     {
-        const ctx = document.getElementById("insightsChart").getContext("2d");
+        const backendUrl = "{{ BACKEND_URL }}";
+        const ctx = document.getElementById("apiUsageChart").getContext("2d");
 
         // Gradient for chart
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, "rgba(37, 99, 235, 0.2)");
         gradient.addColorStop(1, "rgba(37, 99, 235, 0)");
 
-        new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: "line",
             data: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                labels: [],
                 datasets: [
                     {
-                        label: "Vegetation Index (NDVI)",
-                        data: [0.65, 0.59, 0.8, 0.81, 0.56, 0.55],
+                        label: "API Calls (Last Hour)",
+                        data: [],
                         fill: true,
                         borderColor: "#2563eb",
                         backgroundColor: gradient,
@@ -165,6 +111,9 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
                 plugins: {
                     legend: {
                         display: false,
@@ -183,11 +132,9 @@
                         ticks: { font: { family: "Outfit" } },
                     },
                     y: {
-                        beginAtZero: false,
+                        beginAtZero: true,
                         grid: { borderDash: [4, 4], color: "#e2e8f0" },
-                        ticks: { font: { family: "Outfit" } },
-                        min: 0.4,
-                        max: 1.0,
+                        ticks: { font: { family: "Outfit" }, precision: 0 },
                     },
                 },
                 interaction: {
@@ -196,6 +143,46 @@
                 },
             },
         });
+
+        window.runSimulation = async function () {
+            try {
+                const btn = document.querySelector('button[onclick="runSimulation()"]');
+                const originalText = btn.innerText;
+                btn.innerText = "...";
+                btn.disabled = true;
+
+                const response = await fetch(`${backendUrl}/api/simulate-traffic`, { method: 'POST' });
+                if (response.ok) {
+                    fetchUsageData();
+                    btn.innerText = "Done!";
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        async function fetchUsageData() {
+            try {
+                const response = await fetch(`${backendUrl}/api/usage-stats`);
+                const data = await response.json();
+
+                chart.data.labels = data.labels;
+                chart.data.datasets[0].data = data.data;
+                chart.update();
+            } catch (error) {
+                console.error('Error fetching usage stats:', error);
+            }
+        }
+
+        // Initial fetch
+        fetchUsageData();
+
+        // Poll every 2 seconds
+        setInterval(fetchUsageData, 2000);
     }
 </script>
 {% endblock %}

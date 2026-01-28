@@ -48,8 +48,8 @@
           style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; font-weight: 600; cursor: pointer; transition: 0.2s;">
           Details
         </button>
-        <button
-          style="padding: 10px; border-radius: 8px; border: 1px solid #fee2e2; background: #fef2f2; color: #ef4444; font-weight: 600; cursor: pointer;">
+        <button onclick="openCancelModal('{{ sub.product.name|escapejs }}', '{{ sub.product_id }}')"
+          style="text-align: center; padding: 10px; border-radius: 8px; border: 1px solid #fee2e2; background: #fef2f2; color: #ef4444; font-weight: 600; cursor: pointer; display: block; width: 100%;">
           Cancel
         </button>
       </div>
@@ -167,6 +167,38 @@
     </div>
   </div>
 </div>
+
+<!-- Cancellation Confirmation Modal -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Cancel Subscription</h3>
+      <button class="close-modal" onclick="closeCancelModal()">×</button>
+    </div>
+    <div id="cancelModalContent">
+      <p style="color: var(--text-main); line-height: 1.6; font-size: 16px; margin-bottom: 8px;">
+        Are you sure you want to cancel your subscription to:
+      </p>
+      <p style="color: var(--primary); font-weight: 700; font-size: 18px; margin-bottom: 20px;" id="cancelProductName">
+      </p>
+      <div style="background: #fef2f2; padding: 16px; border-radius: 12px; border: 1px solid #fee2e2;">
+        <p style="margin: 0; font-size: 14px; color: #991b1b;">
+          ⚠️ This action will immediately revoke your access to this product's data and features.
+        </p>
+      </div>
+    </div>
+    <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end">
+      <button onclick="closeCancelModal()"
+        style="padding: 12px 24px; background: #e2e8f0; color: var(--text-main); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;">
+        Keep Subscription
+      </button>
+      <button onclick="confirmCancellation()"
+        style="padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;">
+        Yes, Cancel
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -242,6 +274,8 @@
 
 {% block scripts %}
 <script>
+  let productIdToCancel = null;
+
   function openModal(title, description, price) {
     document.getElementById("modalTitle").textContent = title;
     document.getElementById("modalDesc").textContent = description;
@@ -256,10 +290,36 @@
     modal.classList.remove("open");
   }
 
+  function openCancelModal(productName, productId) {
+    document.getElementById("cancelProductName").textContent = productName;
+    productIdToCancel = productId;
+
+    const modal = document.getElementById("cancelModal");
+    modal.classList.add("open");
+  }
+
+  function closeCancelModal() {
+    const modal = document.getElementById("cancelModal");
+    modal.classList.remove("open");
+    productIdToCancel = null;
+  }
+
+  function confirmCancellation() {
+    if (productIdToCancel) {
+      window.location.href = "{% url 'cancel_subscription' 0 %}".replace('0', productIdToCancel);
+    }
+  }
+
   // Close on outside click
   document.getElementById("detailsModal").addEventListener("click", function (e) {
     if (e.target === this) {
       closeModal();
+    }
+  });
+
+  document.getElementById("cancelModal").addEventListener("click", function (e) {
+    if (e.target === this) {
+      closeCancelModal();
     }
   });
 </script>

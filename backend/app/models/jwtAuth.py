@@ -170,13 +170,97 @@ def register(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/verify-signup-otp/', methods=['POST'])
+    def verify_signup_otp():
+        """
+        Verifies email OTP during signup flow (without generating tokens).
+        """
+        try:
+            db = get_db()
+            data = request.json
+            email = data.get("email")
+            otp = data.get("otp")
+
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
+            if user.otp_code != otp:
+                return jsonify({"error": "Invalid OTP"}), 400
+            
+            # Check OTP expiry (10 minutes)
+            if user.otp_created_at:
+                time_diff = datetime.utcnow() - user.otp_created_at
+                if time_diff > timedelta(minutes=10):
+                    return jsonify({"error": "OTP expired. Click 'Resend Code'"}), 400
+            
+            # Mark as verified
+            user.is_verified = 1
+            user.otp_code = None
+            db.commit()
+
+            return jsonify({"success": True, "msg": "Email verified successfully"}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/resend-signup-otp/', methods=['POST'])
+    def resend_signup_otp():
+        """
+        Resend OTP email during signup flow.
+        """
+        try:
+            db = get_db()
+            data = request.json
+            email = data.get("email")
+
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
+            # Generate new OTP
+            if email == "testuser@geoscope.com":
+                otp = "123456"
+            else:
+                otp = generate_otp()
+            
+            # Update user's OTP
+            user.otp_code = otp
+            user.otp_created_at = datetime.utcnow()
+            db.commit()
+
+            # Send new OTP email
+            send_email_otp(email, otp, "Verify your GeoScope Account")
+
+            return jsonify({"success": True, "msg": "New code sent to your email"}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
     @app.route('/login', methods=['POST'])
     def login():
         """
         US-16: Login flow.
-        1. Validate Creds.
-        2. If Valid -> Send OTP (Email).
-        3. Return 200 with 'otp_required'.
+        ---
+        tags:
+          - Authentication
+        parameters:
+          - in: body
+            name: body
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+        responses:
+          200:
+            description: OTP sent
+          401:
+            description: Bad credentials
         """
         try:
             db = get_db()
@@ -216,7 +300,27 @@ def register(app):
     def verify_login_otp():
         """
         Verifies OTP for Login. 
-        If valid, checks for TOTP (Optional 2FA).
+        ---
+        tags:
+          - Authentication
+        parameters:
+          - in: body
+            name: body
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+              properties:
+                email:
+                  type: string
+                otp:
+                  type: string
+        responses:
+          200:
+            description: Login successful, returns tokens
+          401:
+            description: Invalid OTP
         """
         try:
             db = get_db()

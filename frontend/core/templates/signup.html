@@ -20,7 +20,7 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border);
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
   }
 
   .logo-circle {
@@ -96,6 +96,26 @@
     background: var(--primary-dark);
   }
 
+  .btn-secondary {
+    background: #e2e8f0;
+    color: var(--text-main);
+  }
+
+  .btn-secondary:hover {
+    background: #cbd5e0;
+  }
+
+  .btn-link {
+    background: transparent;
+    color: var(--primary);
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .btn-link:hover {
+    background: #f0f9ff;
+  }
+
   .auth-link {
     text-align: center;
     margin-top: 24px;
@@ -149,6 +169,59 @@
     font-size: 14px;
     text-align: center;
   }
+
+  .info-card {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .info-card p {
+    margin: 0 0 12px 0;
+    color: #1e40af;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .info-card ol {
+    margin: 0;
+    padding-left: 20px;
+    color: #1e40af;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .info-card li {
+    margin-bottom: 4px;
+  }
+
+  .qr-container {
+    text-align: center;
+    margin: 24px 0;
+  }
+
+  .qr-container img {
+    max-width: 220px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    background: white;
+    margin: 0 auto;
+  }
+
+  .email-display {
+    text-align: center;
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+
+  .email-display strong {
+    color: var(--primary);
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
@@ -159,7 +232,7 @@
       <img src="{% static 'images/geoscope-logo.png' %}" alt="GeoScope Logo" style="width: 40px; height: 40px;">
     </div>
 
-    <h1 class="auth-title">Create Account</h1>
+    <h1 class="auth-title" id="page-title">Create Account</h1>
 
     <div id="msg-container">
       {% if error %}
@@ -170,28 +243,29 @@
       {% endif %}
     </div>
 
+    <!-- Step 1: Signup Form -->
     <form method="post" id="signup-form">
       {% csrf_token %}
 
       <div class="name-row">
         <div class="form-group">
           <label>First Name</label>
-          <input type="text" name="first_name" required>
+          <input type="text" name="first_name" id="first_name" required>
         </div>
         <div class="form-group">
           <label>Last Name</label>
-          <input type="text" name="last_name" required>
+          <input type="text" name="last_name" id="last_name" required>
         </div>
       </div>
 
       <div class="form-group">
         <label>Email Address</label>
-        <input type="email" name="email" required>
+        <input type="email" name="email" id="email" required>
       </div>
 
       <div class="form-group">
         <label>Password</label>
-        <input type="password" name="password" required>
+        <input type="password" name="password" id="password" required minlength="6">
       </div>
 
       <button type="submit" class="btn-auth">Sign Up</button>
@@ -200,7 +274,6 @@
         Already have an account? <a href="{% url 'login' %}">Log in</a>
       </div>
 
-      <!-- Reusing divider styles from login page which might need to be explicitly added here if not inherited or add inline styles/class -->
       <div
         style="display: flex; align-items: center; text-align: center; margin: 24px 0; color: var(--text-muted); font-size: 14px;">
         <span style="flex:1; border-bottom:1px solid var(--border); margin-right:.5em;"></span>
@@ -226,6 +299,84 @@
         Google
       </button>
     </form>
+
+    <!-- Step 2: Email OTP Verification (NEW) -->
+    <div id="email-otp-section" style="display: none;">
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px; font-size: 15px;">
+        ✓ Account created! Please verify your email
+      </p>
+
+      <div class="info-card">
+        <p><strong>📧 Check your inbox</strong></p>
+        <p>We sent a 6-digit verification code to your email address. Enter it below to continue.</p>
+      </div>
+
+      <div class="email-display">
+        Code sent to: <strong id="email-display"></strong>
+      </div>
+
+      <div class="form-group">
+        <label for="email-otp">Enter 6-digit code</label>
+        <input type="text" id="email-otp" maxlength="6"
+          style="text-align: center; letter-spacing: 8px; font-size: 24px; font-weight: 600;" placeholder="000000" />
+      </div>
+
+      <button type="button" id="btn-verify-email" class="btn-auth">Verify Email</button>
+      <button type="button" id="btn-resend-otp" class="btn-auth btn-link">Resend Code</button>
+
+      <div id="email-otp-error" class="error-msg" style="display: none; margin-top: 16px;"></div>
+    </div>
+
+    <!-- Step 3: 2FA Option Screen -->
+    <div id="twofa-option-section" style="display: none;">
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px; font-size: 15px;">
+        ✓ Email verified successfully!
+      </p>
+
+      <div class="info-card">
+        <p style="margin-bottom: 8px;"><strong>🔐 Secure your account with 2FA</strong></p>
+        <p>Two-factor authentication adds an extra layer of security by requiring a code from your phone when you sign
+          in.</p>
+      </div>
+
+      <button type="button" id="btn-enable-now" class="btn-auth">Enable 2FA Now</button>
+      <button type="button" id="btn-skip" class="btn-auth btn-secondary" style="margin-top: 12px;">Skip for
+        Later</button>
+    </div>
+
+    <!-- Step 4: 2FA Setup Screen -->
+    <div id="twofa-setup-section" style="display: none;">
+      <div id="qr-loading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+        Loading QR code...
+      </div>
+
+      <div id="qr-content" style="display: none;">
+        <div class="info-card">
+          <p><strong>Follow these steps:</strong></p>
+          <ol>
+            <li>Download Google Authenticator or Authy</li>
+            <li>Scan the QR code below</li>
+            <li>Enter the 6-digit code from your app</li>
+          </ol>
+        </div>
+
+        <div class="qr-container">
+          <img id="qr-image" src="" alt="QR Code" />
+        </div>
+
+        <div class="form-group">
+          <label for="setup-otp">Enter 6-digit code</label>
+          <input type="text" id="setup-otp" maxlength="6"
+            style="text-align: center; letter-spacing: 8px; font-size: 24px; font-weight: 600;" placeholder="000000" />
+        </div>
+
+        <button type="button" id="btn-verify-enable" class="btn-auth">Verify & Enable</button>
+        <button type="button" id="btn-skip-setup" class="btn-auth btn-secondary" style="margin-top: 12px;">Skip for
+          Later</button>
+
+        <div id="setup-error" class="error-msg" style="display: none; margin-top: 16px;"></div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -239,11 +390,20 @@
     document.querySelector('.main-content').style.marginLeft = '0';
     document.querySelector('.main-content').style.padding = '20px';
 
-    const form = document.getElementById('signup-form');
-    form.addEventListener('submit', async (e) => {
+    const signupForm = document.getElementById('signup-form');
+    const emailOtpSection = document.getElementById('email-otp-section');
+    const twofaOptionSection = document.getElementById('twofa-option-section');
+    const twofaSetupSection = document.getElementById('twofa-setup-section');
+    const pageTitle = document.getElementById('page-title');
+
+    let userEmail = '';
+
+    // Step 1: Handle Signup
+    signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(form);
+      const formData = new FormData(signupForm);
       const data = Object.fromEntries(formData.entries());
+      userEmail = data.email;
 
       try {
         const response = await fetch('', {
@@ -253,9 +413,17 @@
         });
         const resData = await response.json();
 
-        if (response.ok) {
-          document.getElementById('msg-container').innerHTML = `<div class="success-msg">Account created! Redirecting...</div>`;
-          setTimeout(() => window.location.href = "{% url 'login' %}", 2000);
+        if (response.ok && resData.verification_required) {
+          // Show email OTP verification screen
+          signupForm.style.display = 'none';
+          emailOtpSection.style.display = 'block';
+          pageTitle.textContent = 'Verify Your Email';
+          document.getElementById('email-display').textContent = userEmail;
+        } else if (response.ok) {
+          // Old flow (shouldn't happen)
+          signupForm.style.display = 'none';
+          twofaOptionSection.style.display = 'block';
+          pageTitle.textContent = 'Secure Your Account';
         } else {
           document.getElementById('msg-container').innerHTML = `<div class="error-msg">${resData.msg || 'Signup failed'}</div>`;
         }
@@ -264,6 +432,145 @@
       }
     });
 
+    // Step 2: Verify Email OTP
+    document.getElementById('btn-verify-email').addEventListener('click', async () => {
+      const otp = document.getElementById('email-otp').value;
+      const errorDiv = document.getElementById('email-otp-error');
+
+      if (otp.length !== 6) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = "Please enter a 6-digit code";
+        return;
+      }
+
+      try {
+        const response = await fetch('/verify-signup-otp/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ email: userEmail, otp: otp })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          // Email verified! Show 2FA option
+          emailOtpSection.style.display = 'none';
+          twofaOptionSection.style.display = 'block';
+          pageTitle.textContent = 'Secure Your Account';
+        } else {
+          errorDiv.style.display = 'block';
+          errorDiv.textContent = data.error || "Invalid code. Please try again.";
+        }
+      } catch (e) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = "Network error. Please try again.";
+      }
+    });
+
+    // Resend OTP
+    document.getElementById('btn-resend-otp').addEventListener('click', async () => {
+      const errorDiv = document.getElementById('email-otp-error');
+
+      try {
+        const response = await fetch('/resend-signup-otp/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ email: userEmail })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          errorDiv.style.display = 'block';
+          errorDiv.className = 'success-msg';
+          errorDiv.textContent = "✓ New code sent to your email!";
+          setTimeout(() => {
+            errorDiv.style.display = 'none';
+            errorDiv.className = 'error-msg';
+          }, 3000);
+        } else {
+          errorDiv.style.display = 'block';
+          errorDiv.textContent = data.error || "Failed to resend code";
+        }
+      } catch (e) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = "Network error. Please try again.";
+      }
+    });
+
+    // Step 3: Enable 2FA Now
+    document.getElementById('btn-enable-now').addEventListener('click', () => {
+      twofaOptionSection.style.display = 'none';
+      twofaSetupSection.style.display = 'block';
+      pageTitle.textContent = 'Setup Authenticator';
+      fetchQR();
+    });
+
+    // Skip to login
+    document.getElementById('btn-skip').addEventListener('click', () => {
+      window.location.href = "{% url 'login' %}";
+    });
+
+    document.getElementById('btn-skip-setup').addEventListener('click', () => {
+      window.location.href = "{% url 'login' %}";
+    });
+
+    // Fetch QR code
+    async function fetchQR() {
+      try {
+        const response = await fetch('/setup-2fa-endpoint/');
+        const data = await response.json();
+        if (data.qr_code) {
+          document.getElementById('qr-loading').style.display = 'none';
+          document.getElementById('qr-content').style.display = 'block';
+          document.getElementById('qr-image').src = data.qr_code;
+        }
+      } catch (e) {
+        document.getElementById('qr-loading').innerHTML = '<div class="error-msg">Failed to load QR code</div>';
+      }
+    }
+
+    // Step 4: Verify and enable 2FA
+    document.getElementById('btn-verify-enable').addEventListener('click', async () => {
+      const otp = document.getElementById('setup-otp').value;
+      const errorDiv = document.getElementById('setup-error');
+
+      if (otp.length !== 6) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = "Please enter a 6-digit code";
+        return;
+      }
+
+      try {
+        const response = await fetch('/verify-2fa-setup/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ otp_code: otp })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('msg-container').innerHTML = '<div class="success-msg">2FA enabled successfully! Redirecting to login...</div>';
+          twofaSetupSection.style.display = 'none';
+          setTimeout(() => window.location.href = "{% url 'login' %}", 2000);
+        } else {
+          errorDiv.style.display = 'block';
+          errorDiv.textContent = data.msg || data.error || "Invalid code. Please try again.";
+        }
+      } catch (e) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = "Network error. Please try again.";
+      }
+    });
+
+    // Google signup
     document.getElementById('google-signup-btn').addEventListener('click', () => {
       window.location.href = '/google-login-endpoint/';
     });
